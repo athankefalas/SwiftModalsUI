@@ -9,9 +9,9 @@ import SwiftUI
 
 struct ModalContentTransition: Equatable {
     
-    let transition: AnyModalTransition
+    let transition: AnyPresentationTransition
     
-    init(transition: AnyModalTransition) {
+    init(transition: AnyPresentationTransition) {
         self.transition = transition
     }
     
@@ -29,9 +29,9 @@ struct ModalContentTransitionPreferenceKey: PreferenceKey {
 
 extension View {
     
-    func modalContentTransition<Transition: ModalTransition>(_ transition: Transition) -> some View {
+    func modalContentTransition<Transition: PresentationTransition>(_ transition: Transition) -> some View {
         self.transformPreference(ModalContentTransitionPreferenceKey.self) { value in
-            value = ModalContentTransition(transition: AnyModalTransition(transition))
+            value = ModalContentTransition(transition: AnyPresentationTransition(transition))
         }
     }
 }

@@ -64,3 +64,21 @@ public extension View {
         )
     }
 }
+
+/* TODO: Refacroring
+ 
+ 1. Rename ModalTransition to PresentationTransition
+ 1. Separate common transitions to separate files
+ 1. AnimDuration + AnimCurve -> PlatformAnimation
+ 1. Rename 'modalContent' -> 'modal'
+ 1. Rename 'modalContentBackdrop' -> modalBackdrop
+ 1. Rename 'modalContentTransition' -> modalTransition
+ 1. Rename 'modalContentPresentation' to modalPresentation
+ 1. Leave 'modalContentBackground' to modalContentBackground
+ 1. ModalPresentation make platform independant
+ 1. AnimCurve -> make private
+ 1. AnimDuration -> make private
+ 1.
+ 
+ 
+ */

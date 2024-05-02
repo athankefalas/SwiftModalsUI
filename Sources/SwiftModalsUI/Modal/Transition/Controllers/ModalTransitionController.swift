@@ -10,7 +10,7 @@ import SwiftUI
 
 class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate {
     
-    var transition: AnyModalTransition?
+    var transition: AnyPresentationTransition?
     var modalBackdrop: AnyShapeStyleBox? {
         didSet {
             
@@ -25,7 +25,7 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
     private weak var presentationController: PresentationController?
     
     init(
-        transition: AnyModalTransition? = nil,
+        transition: AnyPresentationTransition? = nil,
         modalBackdrop: AnyShapeStyleBox? = nil
     ) {
         self.transition = transition
@@ -181,9 +181,9 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
     private class TransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         
         let isPresented: Bool
-        let transition: AnyModalTransition
+        let transition: AnyPresentationTransition
         
-        init(isPresented: Bool, transition: AnyModalTransition) {
+        init(isPresented: Bool, transition: AnyPresentationTransition) {
             self.isPresented = isPresented
             self.transition = transition
         }
