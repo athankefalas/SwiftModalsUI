@@ -65,11 +65,11 @@ public extension View {
     }
 }
 
-/* TODO: Refacroring
+/* TODO: Refactoring
  
- 1. Rename ModalTransition to PresentationTransition
- 1. Separate common transitions to separate files
- 1. AnimDuration + AnimCurve -> PlatformAnimation
+ √. Rename ModalTransition to PresentationTransition
+ √. Separate common transitions to separate files
+ √. AnimDuration + AnimCurve -> PlatformAnimation
  1. Rename 'modalContent' -> 'modal'
  1. Rename 'modalContentBackdrop' -> modalBackdrop
  1. Rename 'modalContentTransition' -> modalTransition
