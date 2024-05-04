@@ -8,9 +8,9 @@
 import Foundation
 import SwiftUI
 
-public struct PresentationAnimation {
+public struct PresentationAnimation: Hashable {
     
-    enum Repetition {
+    enum Repetition: Hashable {
         case once
         case forever(autoreverse: Bool)
         case times(count: Int, autoreverse: Bool)
@@ -38,7 +38,7 @@ public struct PresentationAnimation {
         }
     }
     
-    enum EasingCurve {
+    enum EasingCurve: Hashable {
         case `default`
         case linear
         case easeIn
@@ -243,121 +243,5 @@ extension PresentationAnimation {
         springAnimation.duration = springAnimation.settlingDuration
         
         return springAnimation
-    }
-}
-
-
-//#Preview {
-//    Hosted {
-//        TestVC()
-//    }
-//}
-
-struct Hosted<VC: UIViewController>: UIViewControllerRepresentable {
-    
-    private let vc: VC
-    
-    init(_ vc: () -> VC) {
-        self.vc = vc()
-    }
-    
-    func makeUIViewController(context: Context) -> VC {
-        vc
-    }
-    
-    func updateUIViewController(_ uiViewController: VC, context: Context) {}
-}
-
-class TestVC: UIViewController {
-    
-    private let child = UIView()
-    private let tapRecognizer = UITapGestureRecognizer()
-    private var animating = false
-    
-    override func loadView() {
-        super.loadView()
-        
-        child.backgroundColor = .red
-        child.frame = CGRect(
-            origin: .zero,
-            size: CGSize(width: 50, height: 50)
-        )
-        
-        view.addSubview(child)
-        
-        tapRecognizer.addTarget(self, action: #selector(tapAction))
-        view.addGestureRecognizer(tapRecognizer)
-    }
-    
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        animate()
-    }
-    
-    private var platformAnimator: PlatformAnimator?
-    
-    private func animate() {
-        animating = true
-        
-        let bouncySpring = PresentationAnimation.spring(
-            mass: 1.0,
-            stiffness: 1500,
-            damping: 10,
-            initialVelocity: 10
-        )
-        
-        let animator = LayerPropertyTransitionAnimator(
-            keyPath: \.opacity,
-            from: 1,
-            to: 0
-        )
-        
-        let platformAnimator = PlatformAnimator(
-            animation: .easeIn,
-            layer: child.layer,
-            layerAnimators: [animator]
-        ) { done in
-            print("Animation finished. Done? \(done)")
-//            self.platformAnimator = nil
-        }
-        
-        platformAnimator.animate()
-    }
-    
-    class AnimationGroupDelegate: NSObject, CAAnimationDelegate {
-        
-        let onStart: () -> Void
-        let onComplete: (Bool) -> Void
-        
-        init(
-            onStart: @escaping () -> Void,
-            onComplete: @escaping (Bool) -> Void
-        ) {
-            self.onStart = onStart
-            self.onComplete = onComplete
-        }
-        
-        func animationDidStart(_ anim: CAAnimation) {
-            onStart()
-        }
-        
-        func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
-            onComplete(flag)
-        }
-    }
-    
-    private func reset() {
-        animating = false
-        child.layer.removeAnimation(forKey: "group")
-        child.layer.opacity = 1
-    }
-    
-    @objc
-    private func tapAction(_ sender: UITapGestureRecognizer) {
-        if animating {
-            reset()
-        } else {
-            animate()
-        }
     }
 }

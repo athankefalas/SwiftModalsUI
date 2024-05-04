@@ -29,9 +29,9 @@ struct ModalContentTransitionPreferenceKey: PreferenceKey {
 
 extension View {
     
-    func modalContentTransition<Transition: PresentationTransition>(_ transition: Transition) -> some View {
+    func modalContentTransition(_ transition: AnyPresentationTransition) -> some View {
         self.transformPreference(ModalContentTransitionPreferenceKey.self) { value in
-            value = ModalContentTransition(transition: AnyPresentationTransition(transition))
+            value = transition.id == AnyPresentationTransition.identity.id ? value : ModalContentTransition(transition: transition)
         }
     }
 }

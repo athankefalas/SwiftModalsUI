@@ -9,47 +9,46 @@ import Foundation
 
 struct AsymmetricPresentationTransition: PresentationTransition {
     let id: AnyHashable
-    let curve: AnimationCurve
-    let duration: AnimationDuration
-    let insertionAnimation: PlatformViewAnimation
-    let removalAnimation: PlatformViewAnimation
+    
+    private let insertion: AnyPresentationTransition
+    private let removal: AnyPresentationTransition
     
     init<Insertion: PresentationTransition, Removal: PresentationTransition>(
         insertion: Insertion,
-        removal: Removal,
-        duration: TimeInterval = 0.3
+        removal: Removal
     ) {
         
-        self.id = .combining("Asymmetric", insertion.id, removal.id, duration)
-        self.curve = AnimationCurve(
-            insertionCurve: insertion.curve.insertionCurve,
-            removalCurve: removal.curve.removalCurve
-        )
-        self.duration = AnimationDuration(
-            insertion: insertion.duration.insertionDuration,
-            removal: removal.duration.removalDuration
-        )
+        self.id = .combining("Asymmetric", insertion.id, removal.id)
+        self.insertion = insertion.erased()
+        self.removal = removal.erased()
+    }
+    
+    func resolvedAnimation(
+        in environment: PresentationTransitionEnvironment
+    ) -> PresentationAnimation {
         
-        self.insertionAnimation = insertion.insertionAnimation
-        self.removalAnimation = removal.removalAnimation
+        switch environment.intent {
+        case .insertion:
+            return insertion.resolvedAnimation(in: environment)
+        case .removal:
+            return removal.resolvedAnimation(in: environment)
+        }
+    }
+    
+    func resolvedLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [any LayerTransitionAnimator] {
+        
+        switch environment.intent {
+        case .insertion:
+            return insertion.resolvedLayerTransitionAnimator(in: environment)
+        case .removal:
+            return removal.resolvedLayerTransitionAnimator(in: environment)
+        }
     }
 }
 
 // MARK: Asymmetric Extensions
-
-extension PresentationTransition where Self == AsymmetricPresentationTransition {
-    
-    static func asymmetric<Insertion: PresentationTransition, Removal: PresentationTransition>(
-        insertion: Insertion,
-        removal: Removal
-    ) -> AsymmetricPresentationTransition {
-        
-        AsymmetricPresentationTransition(
-            insertion: insertion,
-            removal: removal
-        )
-    }
-}
 
 extension AnyPresentationTransition {
     

@@ -9,9 +9,13 @@ import SwiftUI
 
 struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
     
-    private let keyPath: ReferenceWritableKeyPath<CALayer, Value>
-    private let fromValue: Value
-    private let toValue: Value
+    let keyPath: ReferenceWritableKeyPath<CALayer, Value>
+    let fromValue: Value
+    let toValue: Value
+    
+    var id: AnyHashable {
+        keyPathDescription
+    }
     
     private var keyPathDescription: String {
         "\(keyPath)".replacingOccurrences(of: "\\CALayer.", with: "")
@@ -21,6 +25,7 @@ struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
          from fromValue: Value,
          to toValue: Value
     ) {
+        
         self.keyPath = keyPath
         self.fromValue = fromValue
         self.toValue = toValue
@@ -41,5 +46,46 @@ struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
     
     func animate(layer: CALayer) {
         layer[keyPath: keyPath] = toValue
+    }
+}
+
+extension LayerPropertyTransitionAnimator: MergableLayerTransitionAnimator where Value == CATransform3D {
+    
+    var reduceIdentifier: AnyHashable {
+        keyPathDescription
+    }
+    
+    func merged(
+        with other: any LayerTransitionAnimator
+    ) -> (any LayerTransitionAnimator)? {
+        
+        guard let other = other as? LayerPropertyTransitionAnimator<CATransform3D>,
+              self.reduceIdentifier == other.reduceIdentifier else {
+            return nil
+        }
+        
+        return LayerPropertyTransitionAnimator(
+            keyPath: keyPath,
+            from: concat(other.fromValue, fromValue),
+            to: concat(other.toValue, toValue)
+        )
+    }
+    
+    private func concat(_ t1: CATransform3D, _ t2: CATransform3D) -> CATransform3D {
+        
+        if isScaleTransform(t2) {
+            return CATransform3DConcat(t2, t1)
+        }
+        
+        return CATransform3DConcat(t1, t2)
+    }
+    
+    private func isScaleTransform(_ t: CATransform3D) -> Bool {
+        // Scale t = [sx 0 0 0; 0 sy 0 0; 0 0 sz 0; 0 0 0 1].
+        let sx = t.m11
+        let sy = t.m22
+        let sz = t.m33
+        
+        return abs(sx - 1.0) > 0 || abs(sy - 1.0) > 0 || abs(sz - 1.0) > 0
     }
 }

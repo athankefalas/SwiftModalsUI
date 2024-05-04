@@ -182,16 +182,20 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         
         let isPresented: Bool
         let transition: AnyPresentationTransition
+        private var animator: PlatformAnimator?
         
         init(isPresented: Bool, transition: AnyPresentationTransition) {
             self.isPresented = isPresented
             self.transition = transition
         }
         
-        func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-            let insertionDuraton = transition.duration.insertionDuration
-            let removalDuraton = transition.duration.removalDuration
-            return isPresented ? insertionDuraton : removalDuraton
+        func transitionDuration(
+            using transitionContext: UIViewControllerContextTransitioning?
+        ) -> TimeInterval {
+            
+            let environment = makePresentationTransitionEnvironment(context: transitionContext)
+            let animation = transition.resolvedAnimation(in: environment)
+            return animation.delay + animation.duration
         }
         
         func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -202,6 +206,9 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             }
             
             let isInsertion = isPresented
+            let environment = makePresentationTransitionEnvironment(
+                context: transitionContext
+            )
             
             if isInsertion {
                 transitionContext.containerView.addSubview(destination.view)
@@ -211,37 +218,69 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             destination.view.frame = transitionContext.containerView.bounds
             transitionContext.containerView.layoutIfNeeded()
             
-            let duration = transitionDuration(using: transitionContext)
-            let animation = isInsertion ? transition.insertionAnimation : transition.removalAnimation
-            let animationContext = PlatformAnimationContext(
-                containerSize: transitionContext.containerView.bounds.size
-            )
-            
             guard let targetView = isInsertion ? destination.view : origin.view,
                   let tintAdjustedView = isInsertion ? origin.view : destination.view else {
                 transitionContext.completeTransition(false)
                 return
             }
             
-            animation.setup(animationContext, targetView)
-            animationContext.animate(duration: duration)
+            let animation = transition.resolvedAnimation(
+                in: environment
+            )
+            
+            let layerAnimators = transition.resolvedLayerTransitionAnimator(
+                in: environment
+            )
             
             UIView.animate(
-                withDuration: duration,
-                delay: 0.0,
-                options: [.curveEaseIn, .allowAnimatedContent]
+                withDuration: animation.delay + animation.duration
             ) {
                 tintAdjustedView.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
-                animation.animation(animationContext, targetView)
-            } completion: { didComplete in
+            }
+            
+            animator = PlatformAnimator(
+                animation: animation,
+                layer: targetView.layer,
+                layerAnimators: layerAnimators.reduced()
+            ) { finished in
                 
                 if !isInsertion {
                     targetView.removeFromSuperview()
                 }
                 
-                animationContext.completeAnimation(success: didComplete)
-                transitionContext.completeTransition(didComplete)
+                transitionContext.completeTransition(finished)
+                self.animator?.cancelAnimation()
+                self.animator = nil
             }
+            
+            animator?.animate()
+        }
+        
+        private func makePresentationTransitionEnvironment(
+            context: UIViewControllerContextTransitioning?
+        ) -> PresentationTransitionEnvironment {
+            
+            guard let containerView = context?.containerView else {
+                return PresentationTransitionEnvironment(
+                    intent: isPresented ? .insertion : .removal,
+                    geometry: PresentationTransitionEnvironment.Geometry.zero,
+                    colorScheme: .light
+                )
+            }
+            
+            return PresentationTransitionEnvironment(
+                intent: isPresented ? .insertion : .removal,
+                geometry: PresentationTransitionEnvironment.Geometry(
+                    frame: containerView.frame,
+                    safeAreaInsets: EdgeInsets(
+                        top: containerView.safeAreaInsets.top,
+                        leading: containerView.safeAreaInsets.left,
+                        bottom: containerView.safeAreaInsets.bottom,
+                        trailing: containerView.safeAreaInsets.right
+                    )
+                ),
+                colorScheme: containerView.traitCollection.userInterfaceStyle == .light ? .light : .dark
+            )
         }
     }
 }

@@ -11,9 +11,21 @@ import SwiftUI
 protocol PresentationTransition {
     
     var id: AnyHashable { get }
-    var curve: AnimationCurve { get }
-    var duration: AnimationDuration { get }
     
-    var insertionAnimation: PlatformViewAnimation { get }
-    var removalAnimation: PlatformViewAnimation { get }
+    func resolvedAnimation(
+        in environment: PresentationTransitionEnvironment
+    ) -> PresentationAnimation
+    
+    func resolvedLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [LayerTransitionAnimator]
+}
+
+extension PresentationTransition {
+    
+    func resolvedAnimation(
+        in environment: PresentationTransitionEnvironment
+    ) -> PresentationAnimation {
+        return .default
+    }
 }

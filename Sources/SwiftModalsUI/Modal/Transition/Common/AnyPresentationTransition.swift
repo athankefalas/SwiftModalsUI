@@ -10,89 +10,73 @@ import Foundation
 struct AnyPresentationTransition: PresentationTransition {
     
     let id: AnyHashable
-    let curve: AnimationCurve
-    let duration: AnimationDuration
-    let insertionAnimation: PlatformViewAnimation
-    let removalAnimation: PlatformViewAnimation
+    
+    private let _resolveAnimation: (PresentationTransitionEnvironment) -> PresentationAnimation
+    private let _resolveLayerAnimator: (PresentationTransitionEnvironment) -> [any LayerTransitionAnimator]
     
     init<Transition: PresentationTransition>(_ transition: Transition) {
         id = transition.id
-        curve = transition.curve
-        duration = transition.duration
-        insertionAnimation = transition.insertionAnimation
-        removalAnimation = transition.removalAnimation
+        _resolveAnimation = { transition.resolvedAnimation(in: $0) }
+        _resolveLayerAnimator = { transition.resolvedLayerTransitionAnimator(in: $0) }
     }
     
     fileprivate init(
         id: AnyHashable,
-        curve: AnimationCurve,
-        duration: AnimationDuration,
-        insertionAnimation: PlatformViewAnimation,
-        removalAnimation: PlatformViewAnimation
+        resolveAnimation: @escaping (PresentationTransitionEnvironment) -> PresentationAnimation,
+        resolveLayerAnimator: @escaping (PresentationTransitionEnvironment) -> [any LayerTransitionAnimator]
     ) {
         self.id = id
-        self.curve = curve
-        self.duration = duration
-        self.insertionAnimation = insertionAnimation
-        self.removalAnimation = removalAnimation
+        self._resolveAnimation = resolveAnimation
+        self._resolveLayerAnimator = resolveLayerAnimator
+    }
+    
+    func resolvedAnimation(in environment: PresentationTransitionEnvironment) -> PresentationAnimation {
+        _resolveAnimation(environment)
+    }
+    
+    func resolvedLayerTransitionAnimator(in environment: PresentationTransitionEnvironment) -> [any LayerTransitionAnimator] {
+        _resolveLayerAnimator(environment)
     }
 }
 
 extension PresentationTransition {
     
-    func curve(_ curve: AnimationCurve) -> AnyPresentationTransition {
-        AnyPresentationTransition(
-            id: .combining(id, curve),
-            curve: curve,
-            duration: duration,
-            insertionAnimation: insertionAnimation,
-            removalAnimation: removalAnimation
-        )
+    func animation(_ animation: PresentationAnimation) -> AnyPresentationTransition {
+        
+        if self.id == AnyPresentationTransition.identity.id {
+            return self.erased()
+        }
+        
+        return AnyPresentationTransition(id: .combining(id, animation)) { environment in
+            animation
+        } resolveLayerAnimator: { environment in
+            self.resolvedLayerTransitionAnimator(in: environment)
+        }
     }
     
-    func duration(_ duration: TimeInterval) -> AnyPresentationTransition {
-        AnyPresentationTransition(
-            id: .combining(id, duration),
-            curve: curve,
-            duration: AnimationDuration(duration),
-            insertionAnimation: insertionAnimation,
-            removalAnimation: removalAnimation
-        )
-    }
-    
-    func duration(insertion insertionDuration: TimeInterval, removal removalDuration: TimeInterval) -> AnyPresentationTransition {
-        AnyPresentationTransition(
-            id: .combining(id, insertionDuration, removalDuration),
-            curve: curve,
-            duration: AnimationDuration(insertion: insertionDuration, removal: removalDuration),
-            insertionAnimation: insertionAnimation,
-            removalAnimation: removalAnimation
-        )
-    }
-    
-    func combined<Transition: PresentationTransition>(with other: Transition) -> AnyPresentationTransition {
-        AnyPresentationTransition(
-            id: .combining(id, other.id),
-            curve: other.curve,
-            duration: other.duration,
-            insertionAnimation: PlatformViewAnimation { context, view in
-                insertionAnimation.setup(context, view)
-                other.insertionAnimation.setup(context, view)
-            } animation: { context, view in
-                insertionAnimation.animation(context, view)
-                other.insertionAnimation.animation(context, view)
-            },
-            removalAnimation: PlatformViewAnimation { context, view in
-                removalAnimation.setup(context, view)
-                other.removalAnimation.setup(context, view)
-            } animation: { context, view in
-                removalAnimation.animation(context, view)
-                other.removalAnimation.animation(context, view)
-            }
-        )
+    func combined(with other: AnyPresentationTransition) -> AnyPresentationTransition {
+        
+        if self.id == AnyPresentationTransition.identity.id {
+            return other
+        }
+        
+        if other.id == AnyPresentationTransition.identity.id {
+            return self.erased()
+        }
+        
+        return AnyPresentationTransition(id: .combining(id, other.id)) { environment in
+            other.resolvedAnimation(in: environment)
+        } resolveLayerAnimator: { environment in
+            resolvedLayerTransitionAnimator(in: environment) + other.resolvedLayerTransitionAnimator(in: environment)
+        }
     }
     
     func erased() -> AnyPresentationTransition {
-        AnyPresentationTransition(self)
+        
+        if let erasedSelf = self as? AnyPresentationTransition {
+            return erasedSelf
+        }
+        
+        return AnyPresentationTransition(self)
     }
 }

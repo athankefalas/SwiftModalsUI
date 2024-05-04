@@ -10,53 +10,96 @@ import SwiftUI
 struct ScalePresentationTransition: PresentationTransition {
     
     let id: AnyHashable
-    let curve: AnimationCurve
     let scale: CGFloat
-    let duration: AnimationDuration
     
-    var insertionAnimation: PlatformViewAnimation {
-        PlatformViewAnimation { _, view in
-            view.transform = view.transform.scaledBy(
-                x: scale,
-                y: scale
-            )
-        } animation: { _, view in
-            view.transform = CGAffineTransform.identity
-        }
-    }
-    
-    var removalAnimation: PlatformViewAnimation {
-        PlatformViewAnimation { _, view in
-            view.transform = CGAffineTransform.identity
-        } animation: { _, view in
-            view.transform = view.transform.scaledBy(
-                x: scale,
-                y: scale
-            )
-        }
-    }
-    
-    init(scale: CGFloat, duration: TimeInterval = 0.3) {
-        let scale = max(scale, 0.001)
-        self.id = .combining("Scale", scale, duration)
+    init(scale: CGFloat) {
+        self.id = .combining("Scale", scale)
         self.scale = scale
-        self.curve = .defaultCurve()
-        self.duration = AnimationDuration(duration)
+    }
+    
+    func resolvedLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [any LayerTransitionAnimator] {
+        
+        let targetTransform = transform(environment)
+        let animator = LayerPropertyTransitionAnimator(
+            keyPath: \.transform,
+            from: environment.intent == .insertion ? targetTransform : CATransform3DIdentity,
+            to: environment.intent == .insertion ? CATransform3DIdentity : targetTransform
+        )
+        
+        return [animator]
+    }
+    
+    private func transform(
+        _ environment: PresentationTransitionEnvironment
+    ) -> CATransform3D {
+        
+        return CATransform3DScale(
+            CATransform3DIdentity,
+            scale,
+            scale,
+            1
+        )
+    }
+}
+
+#Preview {
+    ModalsPlayground()
+}
+
+struct ModalsPlayground: View {
+    
+    struct DismissButton: View {
+        @Environment(\.presentationMode)
+        private var presentationMode
+        
+        var body: some View {
+            Button("Dismiss") {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
+    }
+    
+    @State
+    private var show = false
+    
+    private var transition: AnyPresentationTransition {
+//        .identity
+//        .scale
+//        .move(edge: .trailing)
+//        .combined(with: .opacity)
+//        .combined(with: .move(edge: .trailing))
+//        .combined(with: .opacity)
+//        .opacity.combined(with: .scale.combined(with: .move(edge: .trailing)))
+//        .move(edge: .trailing).combined(with: .scale)
+        .scale.combined(with: .move(edge: .trailing))
+    }
+    
+    var body: some View {
+        VStack {
+            Button(show ? "Hide" : "Show") {
+                show.toggle()
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.default, value: show)
+        .modalContent(isPresented: $show) {
+            VStack {
+                Text("Hello World!")
+                DismissButton()
+            }
+            .modalContentBackdrop(.red.opacity(0.5))
+            .modalContentTransition(
+                transition.animation(
+                    .easeInOut(duration: 4)
+                )
+            )
+        }
     }
 }
 
 // MARK: Scale Extensions
-
-extension PresentationTransition where Self == ScalePresentationTransition {
-    
-    static var scale: ScalePresentationTransition {
-        return .scale(scale: 0)
-    }
-    
-    static func scale(scale: CGFloat) -> ScalePresentationTransition {
-        ScalePresentationTransition(scale: scale)
-    }
-}
 
 extension AnyPresentationTransition {
     

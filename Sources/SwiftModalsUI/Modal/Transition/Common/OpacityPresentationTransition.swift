@@ -10,40 +10,26 @@ import Foundation
 struct OpacityPresentationTransition: PresentationTransition {
     
     let id: AnyHashable
-    let curve: AnimationCurve
-    let duration: AnimationDuration
     
-    var insertionAnimation: PlatformViewAnimation {
-        PlatformViewAnimation { _, view in
-            view.alpha = 0
-        } animation: { _, view in
-            view.alpha = 1
-        }
+    init() {
+        self.id = .combining("Opacity")
     }
     
-    var removalAnimation: PlatformViewAnimation {
-        PlatformViewAnimation { _, view in
-            view.alpha = 1
-        } animation: { _, view in
-            view.alpha = 0
-        }
-    }
-    
-    init(duration: TimeInterval = 0.3) {
-        self.id = .combining("Opacity", duration)
-        self.curve = .defaultCurve()
-        self.duration = AnimationDuration(duration)
+    func resolvedLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [any LayerTransitionAnimator] {
+        
+        let animator = LayerPropertyTransitionAnimator(
+            keyPath: \.opacity,
+            from: environment.intent == .insertion ? 0 : 1,
+            to: environment.intent == .insertion ? 1 : 0
+        )
+        
+        return [animator]
     }
 }
 
 // MARK: Opacity Extensions
-
-extension PresentationTransition where Self == OpacityPresentationTransition {
-    
-    static var opacity: OpacityPresentationTransition {
-        OpacityPresentationTransition()
-    }
-}
 
 extension AnyPresentationTransition {
     

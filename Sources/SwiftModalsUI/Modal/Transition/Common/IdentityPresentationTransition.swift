@@ -9,32 +9,26 @@ import Foundation
 
 struct IdentityPresentationTransition: PresentationTransition {
     let id: AnyHashable
-    let curve: AnimationCurve
-    let duration: AnimationDuration
-    
-    var insertionAnimation: PlatformViewAnimation {
-        PlatformViewAnimation(setup: {_, _ in }, animation: {_, _ in })
-    }
-    
-    var removalAnimation: PlatformViewAnimation {
-        PlatformViewAnimation(setup: {_, _ in }, animation: {_, _ in })
-    }
     
     init() {
-        self.id = .combining("Identity", 0)
-        self.curve = .linear
-        self.duration = 0.0
+        self.id = .combining("Identity")
+    }
+    
+    func resolvedAnimation(
+        in environment: PresentationTransitionEnvironment
+    ) -> PresentationAnimation {
+        return .linear(duration: 0)
+    }
+    
+    func resolvedLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [any LayerTransitionAnimator] {
+        
+        return []
     }
 }
 
 // MARK: Identity Extentensions
-
-extension PresentationTransition where Self == IdentityPresentationTransition {
-    
-    static var identity: IdentityPresentationTransition {
-        IdentityPresentationTransition()
-    }
-}
 
 extension AnyPresentationTransition {
     
