@@ -15,86 +15,8 @@ struct RevealPresentationTransition: PresentationTransition {
     let initialSize: CGSize
     let finalShapeScale: CGFloat
     
-//    var insertionAnimation: PlatformViewAnimation {
-//        PlatformViewAnimation { context, view in
-//            let maskLayer = CAShapeLayer()
-//            view.layer.mask = maskLayer
-//            
-//            let size = context.containerSize
-//            let originRect = originRect(in: size)
-//            let destinationRect = destinationRect(from: originRect, with: size)
-//            let fromPath = shape.path(in: originRect).cgPath
-//            let toPath = shape.path(in: destinationRect).cgPath
-//            
-//            maskLayer.path = fromPath
-//            view.layer.borderWidth = 0.1
-//            
-//            context.addExplicitAnimation(
-//                PlatformExplicitAnimator { duration in
-//                    let animation = CABasicAnimation(keyPath: "path")
-//                    animation.fromValue = fromPath
-//                    animation.toValue = toPath
-//                    animation.duration = duration
-//                    animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-//                    animation.isRemovedOnCompletion = true
-//                    
-//                    maskLayer.add(animation, forKey: nil)
-//                    
-//                    CATransaction.begin()
-//                    CATransaction.setDisableActions(true)
-//                    maskLayer.path = toPath
-//                    CATransaction.commit()
-//                } completeAnimation: { didComplete in
-//                    view.layer.mask = nil
-//                }
-//            )
-//
-//        } animation: { context, view in
-//            view.layer.borderWidth = 0.0
-//        }
-//    }
-    
-//    var removalAnimation: PlatformViewAnimation {
-//        PlatformViewAnimation { context, view in
-//            let maskLayer = CAShapeLayer()
-//            view.layer.mask = maskLayer
-//            
-//            let size = context.containerSize
-//            let originRect = originRect(in: size)
-//            let destinationRect = destinationRect(from: originRect, with: size)
-//            let fromPath = shape.path(in: destinationRect).cgPath
-//            let toPath = shape.path(in: originRect).cgPath
-//            
-//            maskLayer.path = fromPath
-//            view.layer.borderWidth = 0.1
-//            
-//            context.addExplicitAnimation(
-//                PlatformExplicitAnimator { duration in
-//                    let animation = CABasicAnimation(keyPath: "path")
-//                    animation.fromValue = fromPath
-//                    animation.toValue = toPath
-//                    animation.duration = duration
-//                    animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-//                    animation.isRemovedOnCompletion = true
-//                    
-//                    maskLayer.add(animation, forKey: nil)
-//                    
-//                    CATransaction.begin()
-//                    CATransaction.setDisableActions(true)
-//                    maskLayer.path = toPath
-//                    CATransaction.commit()
-//                } completeAnimation: { didComplete in
-//                    view.layer.mask = nil
-//                }
-//            )
-//            
-//        } animation: { context, view in
-//            view.layer.borderWidth = 0.0
-//        }
-//    }
-    
-    init<SomeShape: Shape>(
-        shape: SomeShape,
+    init<ClipShape: Shape>(
+        shape: ClipShape,
         anchor: UnitPoint = .bottom,
         initialSize: CGSize = CGSize(width: 0, height: 0),
         finalShapeScale: CGFloat? = nil
@@ -106,10 +28,13 @@ struct RevealPresentationTransition: PresentationTransition {
         self.finalShapeScale = finalShapeScale ?? Self.defaultFinalShapeScale(for: shape)
     }
     
-    private static func defaultFinalShapeScale<SomeShape: Shape>(for shape: SomeShape) -> CGFloat {
+    private static func defaultFinalShapeScale<ClipShape: Shape>(
+        for shape: ClipShape
+    ) -> CGFloat {
         
         if shape is Circle {
-            // Approx 1.0 + sqrt(2), largest fitting square in a circle is r * sqrt(2)
+            // Approximately 1.0 + sqrt(2), which is derived by the
+            // largest fitting square in a circle, which is r * sqrt(2)
             return 2.5
         }
         
@@ -119,7 +44,23 @@ struct RevealPresentationTransition: PresentationTransition {
     func resolvedLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
-        []
+        
+        let size = environment.geometry.frame.size
+        let originRect = originRect(in: size)
+        let destinationRect = destinationRect(from: originRect, with: size)
+        let originPath = shape.path(in: originRect).cgPath
+        let destinationPath = shape.path(in: destinationRect).cgPath
+        
+        let animator = MaskLayerTransitionAnimator(maskLayer: CAShapeLayer()) { maskLayer in
+            LayerPropertyTransitionAnimator(
+                layerType: type(of: maskLayer),
+                keyPath: \.path,
+                from: environment.intent == .insertion ? originPath : destinationPath,
+                to: environment.intent == .insertion ? destinationPath : originPath
+            )
+        }
+        
+        return [animator]
     }
     
     private func originRect(in size: CGSize) -> CGRect {
@@ -157,6 +98,53 @@ struct RevealPresentationTransition: PresentationTransition {
         )
         
         return CGRect(origin: origin, size: maximalSquareSize)
+    }
+}
+
+#Preview {
+    ModalsPlayground()
+}
+
+struct ModalsPlayground: View {
+    
+    struct DismissButton: View {
+        @Environment(\.presentationMode)
+        private var presentationMode
+        
+        var body: some View {
+            Button("Dismiss") {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
+    }
+    
+    @State
+    private var show = false
+    
+    private var transition: AnyPresentationTransition {
+        .reveal(anchor: .center)
+    }
+    
+    var body: some View {
+        VStack {
+            Button(show ? "Hide" : "Show") {
+                show.toggle()
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.default, value: show)
+        .modalContent(isPresented: $show) {
+            VStack {
+                Text("Hello World!")
+                DismissButton()
+            }
+            .modalContentBackdrop(.red.opacity(0.5))
+            .modalContentTransition(
+                transition.animation(
+                    .easeInOut(duration: 3)
+                )
+            )
+        }
     }
 }
 

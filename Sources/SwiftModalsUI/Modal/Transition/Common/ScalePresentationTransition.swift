@@ -44,61 +44,6 @@ struct ScalePresentationTransition: PresentationTransition {
     }
 }
 
-#Preview {
-    ModalsPlayground()
-}
-
-struct ModalsPlayground: View {
-    
-    struct DismissButton: View {
-        @Environment(\.presentationMode)
-        private var presentationMode
-        
-        var body: some View {
-            Button("Dismiss") {
-                presentationMode.wrappedValue.dismiss()
-            }
-        }
-    }
-    
-    @State
-    private var show = false
-    
-    private var transition: AnyPresentationTransition {
-//        .identity
-//        .scale
-//        .move(edge: .trailing)
-//        .combined(with: .opacity)
-//        .combined(with: .move(edge: .trailing))
-//        .combined(with: .opacity)
-//        .opacity.combined(with: .scale.combined(with: .move(edge: .trailing)))
-//        .move(edge: .trailing).combined(with: .scale)
-        .scale.combined(with: .move(edge: .trailing))
-    }
-    
-    var body: some View {
-        VStack {
-            Button(show ? "Hide" : "Show") {
-                show.toggle()
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .animation(.default, value: show)
-        .modalContent(isPresented: $show) {
-            VStack {
-                Text("Hello World!")
-                DismissButton()
-            }
-            .modalContentBackdrop(.red.opacity(0.5))
-            .modalContentTransition(
-                transition.animation(
-                    .easeInOut(duration: 4)
-                )
-            )
-        }
-    }
-}
-
 // MARK: Scale Extensions
 
 extension AnyPresentationTransition {

@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
+struct LayerPropertyTransitionAnimator<Layer: CALayer, Value>: LayerTransitionAnimator {
     
-    let keyPath: ReferenceWritableKeyPath<CALayer, Value>
+    let keyPath: ReferenceWritableKeyPath<Layer, Value>
     let fromValue: Value
     let toValue: Value
     
@@ -18,13 +18,26 @@ struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
     }
     
     private var keyPathDescription: String {
-        "\(keyPath)".replacingOccurrences(of: "\\CALayer.", with: "")
+        "\(keyPath)".replacingOccurrences(of: "\\\(Layer.self).", with: "")
     }
     
-    init(keyPath: ReferenceWritableKeyPath<CALayer, Value>,
-         from fromValue: Value,
-         to toValue: Value
+    init(
+        layerType: Layer.Type,
+        keyPath: ReferenceWritableKeyPath<Layer, Value>,
+        from fromValue: Value,
+        to toValue: Value
     ) {
+        
+        self.keyPath = keyPath
+        self.fromValue = fromValue
+        self.toValue = toValue
+    }
+    
+    init(
+        keyPath: ReferenceWritableKeyPath<Layer, Value>,
+        from fromValue: Value,
+        to toValue: Value
+    ) where Layer == CALayer {
         
         self.keyPath = keyPath
         self.fromValue = fromValue
@@ -35,6 +48,11 @@ struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
         presentationAnimation: PresentationAnimation,
         for layer: CALayer
     ) -> CAAnimation {
+        
+        guard let layer = layer as? Layer else {
+            return CAAnimation()
+        }
+        
         layer[keyPath: keyPath] = fromValue
         
         return presentationAnimation.animation(
@@ -45,6 +63,10 @@ struct LayerPropertyTransitionAnimator<Value>: LayerTransitionAnimator {
     }
     
     func animate(layer: CALayer) {
+        guard let layer = layer as? Layer else {
+            return
+        }
+        
         layer[keyPath: keyPath] = toValue
     }
 }
@@ -59,12 +81,13 @@ extension LayerPropertyTransitionAnimator: MergableLayerTransitionAnimator where
         with other: any LayerTransitionAnimator
     ) -> (any LayerTransitionAnimator)? {
         
-        guard let other = other as? LayerPropertyTransitionAnimator<CATransform3D>,
+        guard let other = other as? LayerPropertyTransitionAnimator<Layer, CATransform3D>,
               self.reduceIdentifier == other.reduceIdentifier else {
             return nil
         }
         
         return LayerPropertyTransitionAnimator(
+            layerType: Layer.self,
             keyPath: keyPath,
             from: concat(other.fromValue, fromValue),
             to: concat(other.toValue, toValue)

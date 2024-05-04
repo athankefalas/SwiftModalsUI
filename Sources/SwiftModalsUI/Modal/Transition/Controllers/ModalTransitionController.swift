@@ -232,12 +232,11 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 in: environment
             )
             
-            UIView.animate(
-                withDuration: animation.delay + animation.duration
-            ) {
+            animateView(using: animation) {
                 tintAdjustedView.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
             }
             
+            targetView.layer.zPosition = .greatestFiniteMagnitude
             animator = PlatformAnimator(
                 animation: animation,
                 layer: targetView.layer,
@@ -249,6 +248,8 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 }
                 
                 transitionContext.completeTransition(finished)
+                targetView.layer.zPosition = 0
+                
                 self.animator?.cancelAnimation()
                 self.animator = nil
             }
@@ -280,6 +281,58 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                     )
                 ),
                 colorScheme: containerView.traitCollection.userInterfaceStyle == .light ? .light : .dark
+            )
+        }
+        
+        private func animateView(
+            using animation: PresentationAnimation,
+            _ animations: @escaping () -> Void,
+            completion: @escaping (Bool) -> Void = {_ in }
+        ) {
+            
+            let delay = animation.delay
+            let duration = animation.duration
+            var options: UIView.AnimationOptions = [.overrideInheritedCurve, .overrideInheritedOptions, .overrideInheritedDuration]
+            
+            switch animation.repetition {
+            case .forever(autoreverse: let autoreverse):
+                options.insert(.repeat)
+                
+                if autoreverse {
+                    options.insert(.autoreverse)
+                }
+                
+            case .times(count: _, autoreverse: let autoreverse):
+                options.insert(.repeat)
+                
+                if autoreverse {
+                    options.insert(.autoreverse)
+                }
+            default:
+                break
+            }
+            
+            switch animation.easingCurve {
+            case .default:
+                options.remove(.overrideInheritedCurve)
+            case .linear:
+                options.insert(.curveLinear)
+            case .easeIn:
+                options.insert(.curveEaseIn)
+            case .easeOut:
+                options.insert(.curveEaseOut)
+            case .easeInOut:
+                options.insert(.curveEaseInOut)
+            case .spring:
+                options.insert(.curveEaseInOut)
+            }
+            
+            UIView.animate(
+                withDuration: duration,
+                delay: delay,
+                options: options,
+                animations: animations,
+                completion: completion
             )
         }
     }

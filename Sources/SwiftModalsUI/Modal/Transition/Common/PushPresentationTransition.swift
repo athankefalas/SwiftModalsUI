@@ -1,19 +1,19 @@
 //
-//  MovePresentationTransition.swift
+//  PushPresentationTransition.swift
 //
 //
-//  Created by Αθανάσιος Κεφαλάς on 2/5/24.
+//  Created by Αθανάσιος Κεφαλάς on 4/5/24.
 //
 
 import SwiftUI
 
-struct MovePresentationTransition: PresentationTransition {
+struct PushPresentationTransition: PresentationTransition {
     
     let id: AnyHashable
     let edge: Edge
     
     init(edge: Edge) {
-        self.id = .combining("Move", edge)
+        self.id = .combining("Push", edge)
         self.edge = edge
     }
     
@@ -37,48 +37,61 @@ struct MovePresentationTransition: PresentationTransition {
         
         return CATransform3DTranslate(
             CATransform3DIdentity,
-            transformTranslationX(width: environment.geometry.frame.width),
-            transformTranslationY(height: environment.geometry.frame.height),
+            transformTranslationX(
+                width: environment.geometry.frame.width,
+                intent: environment.intent
+            ),
+            transformTranslationY(
+                height: environment.geometry.frame.height,
+                intent: environment.intent
+            ),
             0
         )
     }
     
-    private func transformTranslationX(width: CGFloat) -> CGFloat {
+    private func transformTranslationX(
+        width: CGFloat,
+        intent: PresentationTransitionEnvironment.Intent
+    ) -> CGFloat {
+        
+        let factor: CGFloat = intent == .insertion ? 1 : -1
+        
         switch edge {
         case .top:
             return 0
         case .leading:
-            return -width
+            return -width * factor
         case .bottom:
             return 0
         case .trailing:
-            return width
+            return width * factor
         }
     }
     
-    private func transformTranslationY(height: CGFloat) -> CGFloat {
+    private func transformTranslationY(
+        height: CGFloat,
+        intent: PresentationTransitionEnvironment.Intent
+    ) -> CGFloat {
+        let factor: CGFloat = intent == .insertion ? 1 : -1
+        
         switch edge {
         case .top:
-            return -height
+            return -height * factor
         case .leading:
             return 0
         case .bottom:
-            return height
+            return height * factor
         case .trailing:
             return 0
         }
     }
 }
 
-// MARK: Move Extensions
+// MARK: Push Extensions
 
 extension AnyPresentationTransition {
     
-    static var slide: AnyPresentationTransition {
-        return .move(edge: .bottom)
-    }
-    
-    static func move(edge: Edge) -> AnyPresentationTransition {
-        MovePresentationTransition(edge: edge).erased()
+    static func push(edge: Edge) -> AnyPresentationTransition {
+        PushPresentationTransition(edge: edge).erased()
     }
 }
