@@ -23,9 +23,8 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
     private var onDismiss: (() -> Void)?
     
     private var currentTransition = AppearanceTransition.none
-    private var transition = ModalContentTransitionPreferenceKey.defaultValue
-    private var backdropStyle = ModalContentBackdropPreferenceKey.defaultValue
-    private var presentationStyle = ModalContentPresentationPreferenceKey.defaultValue
+    private var transition = ModalTransitionPreferenceKey.defaultValue
+    private var backdropStyle = ModalBackdropPreferenceKey.defaultValue
     
     private weak var stagingParent: UIViewController?
     private weak var presentingParentViewController: UIViewController?
@@ -70,6 +69,9 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         self.onDismiss = onDismiss
         
         self.updateContent(to: content)
+        self.modalTransitionStyle = .coverVertical
+        self.modalPresentationStyle = .custom
+        
         subscription = preferencesChangedSubject
             .debounce(for: 0.0, scheduler: DispatchQueue.main)
             .sink { [weak self] in
@@ -127,16 +129,12 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         
         self.rootView = ModallyPresentedContent(
             content: content()
-                .onPreferenceChange(ModalContentTransitionPreferenceKey.self) { [weak self] newValue in
+                .onPreferenceChange(ModalTransitionPreferenceKey.self) { [weak self] newValue in
                     self?.transition = newValue
                     self?.preferencesChangedSubject.send()
                 }
-                .onPreferenceChange(ModalContentBackdropPreferenceKey.self) { [weak self] newValue in
+                .onPreferenceChange(ModalBackdropPreferenceKey.self) { [weak self] newValue in
                     self?.backdropStyle = newValue
-                    self?.preferencesChangedSubject.send()
-                }
-                .onPreferenceChange(ModalContentPresentationPreferenceKey.self) { [weak self] newValue in
-                    self?.presentationStyle = newValue
                     self?.preferencesChangedSubject.send()
                 }
         )
@@ -154,20 +152,12 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
     }
     
     private func onPreferencesChanged() {
-        let presentationStyle = presentationStyle
         transitionController?.transition = transition?.transition
         transitionController?.modalBackdrop = backdropStyle
         transitioningDelegate = transitionController
         
         guard super.presentingViewController == nil else {
             return
-        }
-        
-        modalTransitionStyle = presentationStyle.modalTransitionStyle
-        modalPresentationStyle = presentationStyle.modalPresentationStyle
-        
-        if presentationStyle.modalPresentationStyle == .automatic && transitionController?.transition != nil {
-            modalPresentationStyle = .custom
         }
         
         guard isStaged else {

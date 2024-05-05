@@ -1,5 +1,5 @@
 //
-//  ModalContentModifier.swift
+//  ModalModifier.swift
 //  UIKitRefresherPlayground
 //
 //  Created by Αθανάσιος Κεφαλάς on 18/4/24.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-fileprivate struct ModalContentModifier<ModalContent: View>: ViewModifier {
+fileprivate struct ModalModifier<ModalContent: View>: ViewModifier {
     
     let isPresented: Binding<Bool>
     let onDismiss: (() -> Void)?
@@ -40,13 +40,13 @@ fileprivate struct ModalContentModifier<ModalContent: View>: ViewModifier {
 
 extension View {
     
-    func modalContent<Content: View>(
+    func modal<Content: View>(
         isPresented: Binding<Bool>,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         self.modifier(
-            ModalContentModifier(
+            ModalModifier(
                 isPresented: isPresented,
                 onDismiss: onDismiss,
                 modalContent: content
@@ -54,13 +54,13 @@ extension View {
         )
     }
     
-    func modalContent<Item: Identifiable, Content: View>(
+    func modal<Item: Identifiable, Content: View>(
         item: Binding<Item?>,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         self.modifier(
-            ModalContentModifier(
+            ModalModifier(
                 isPresented: Binding {
                     item.wrappedValue != nil
                 } set: { newValue, transaction in

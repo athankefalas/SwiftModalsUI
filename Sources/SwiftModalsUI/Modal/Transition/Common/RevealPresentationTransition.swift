@@ -122,7 +122,8 @@ struct ModalsPlayground: View {
     private var show = false
     
     private var transition: AnyPresentationTransition {
-        .reveal(anchor: .center)
+//        .reveal(anchor: .center)
+        .opacity
     }
     
     var body: some View {
@@ -133,15 +134,15 @@ struct ModalsPlayground: View {
         }
         .frame(maxWidth: .infinity)
         .animation(.default, value: show)
-        .modalContent(isPresented: $show) {
+        .modal(isPresented: $show) {
             VStack {
                 Text("Hello World!")
                 DismissButton()
             }
-            .modalContentBackdrop(.red.opacity(0.5))
-            .modalContentTransition(
+            .modalBackdrop(.blue.opacity(0.5))
+            .modalTransition(
                 transition.animation(
-                    .easeInOut(duration: 3)
+                    .easeIn(duration: 3)
                 )
             )
         }

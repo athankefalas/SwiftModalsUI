@@ -38,14 +38,10 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         source: UIViewController
     ) -> UIPresentationController? {
         
-        guard let modalBackdrop = modalBackdrop else {
-            return nil
-        }
-        
         let presentationController = PresentationController(
             presentedViewController: presented,
             presenting: presenting,
-            backdrop: modalBackdrop
+            backdrop: modalBackdrop ?? AnyShapeStyleBox(.clear)
         )
         
         self.presentationController = presentationController
@@ -218,8 +214,8 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             destination.view.frame = transitionContext.containerView.bounds
             transitionContext.containerView.layoutIfNeeded()
             
-            guard let targetView = isInsertion ? destination.view : origin.view,
-                  let tintAdjustedView = isInsertion ? origin.view : destination.view else {
+            guard let presentedView = isInsertion ? destination.view : origin.view,
+                  let presenterView = isInsertion ? origin.view : destination.view else {
                 transitionContext.completeTransition(false)
                 return
             }
@@ -232,23 +228,26 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 in: environment
             )
             
+            presentedView.layer.zPosition = .greatestFiniteMagnitude
+            
             animateView(using: animation) {
-                tintAdjustedView.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
+                presenterView.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
             }
             
-            targetView.layer.zPosition = .greatestFiniteMagnitude
+            print(transitionContext.containerView.subviews.map({ "\(type(of: $0))" }))
+            
             animator = PlatformAnimator(
                 animation: animation,
-                layer: targetView.layer,
+                layer: presentedView.layer,
                 layerAnimators: layerAnimators.reduced()
             ) { finished in
                 
                 if !isInsertion {
-                    targetView.removeFromSuperview()
+                    presentedView.removeFromSuperview()
                 }
                 
                 transitionContext.completeTransition(finished)
-                targetView.layer.zPosition = 0
+                presentedView.layer.zPosition = 0
                 
                 self.animator?.cancelAnimation()
                 self.animator = nil
