@@ -37,14 +37,23 @@ public class PresentationTransitionEnvironment {
     public let intent: Intent
     public let geometry: Geometry
     public let colorScheme: ColorScheme
+    public let horizontalSizeClass: UserInterfaceSizeClass
+    public let verticalSizeClass: UserInterfaceSizeClass
+    public let layoutDirection: LayoutDirection
     
     public init(
         intent: Intent,
         geometry: Geometry,
-        colorScheme: ColorScheme
+        colorScheme: ColorScheme,
+        horizontalSizeClass: UserInterfaceSizeClass,
+        verticalSizeClass: UserInterfaceSizeClass,
+        layoutDirection: LayoutDirection
     ) {
         self.intent = intent
         self.geometry = geometry
         self.colorScheme = colorScheme
+        self.horizontalSizeClass = horizontalSizeClass
+        self.verticalSizeClass = verticalSizeClass
+        self.layoutDirection = layoutDirection
     }
 }

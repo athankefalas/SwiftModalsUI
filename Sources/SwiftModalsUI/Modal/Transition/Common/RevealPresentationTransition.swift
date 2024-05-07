@@ -12,42 +12,24 @@ struct RevealPresentationTransition: PresentationTransition {
     let id: AnyHashable
     let shape: AnyShape
     let anchor: UnitPoint
-    let initialSize: CGSize
-    let finalShapeScale: CGFloat
+    let maximalFittingRect: (CGRect) -> CGRect
     
-    init<ClipShape: Shape>(
+    init<ClipShape: RevealMaskShape>(
         shape: ClipShape,
-        anchor: UnitPoint = .bottom,
-        initialSize: CGSize = CGSize(width: 0, height: 0),
-        finalShapeScale: CGFloat? = nil
+        anchor: UnitPoint = .center
     ) {
         self.id = .combining("Reveal")
         self.shape = AnyShape(shape)
         self.anchor = anchor
-        self.initialSize = initialSize
-        self.finalShapeScale = finalShapeScale ?? Self.defaultFinalShapeScale(for: shape)
-    }
-    
-    private static func defaultFinalShapeScale<ClipShape: Shape>(
-        for shape: ClipShape
-    ) -> CGFloat {
-        
-        if shape is Circle {
-            // Approximately 1.0 + sqrt(2), which is derived by the
-            // largest fitting square in a circle, which is r * sqrt(2)
-            return 2.5
-        }
-        
-        return 1.0
+        self.maximalFittingRect = { shape.maximalFittingRect(in: $0) }
     }
     
     func resolvedLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         
-        let size = environment.geometry.frame.size
-        let originRect = originRect(in: size)
-        let destinationRect = destinationRect(from: originRect, with: size)
+        let originRect = originRect(in: environment)
+        let destinationRect = destinationRect(from: originRect, in: environment)
         let originPath = shape.path(in: originRect).cgPath
         let destinationPath = shape.path(in: destinationRect).cgPath
         
@@ -63,89 +45,141 @@ struct RevealPresentationTransition: PresentationTransition {
         return [animator]
     }
     
-    private func originRect(in size: CGSize) -> CGRect {
+    private func originRect(
+        in environment: PresentationTransitionEnvironment
+    ) -> CGRect {
+        
+        let origin = environment.geometry
+            .frame
+            .point(at: anchor)
+        
         return CGRect(
-            origin: originPoint(
-                at: anchor,
-                in: size
-            ),
-            size: initialSize
+            origin: origin,
+            size: .init(
+                width: 1,
+                height: 1
+            )
         )
     }
     
-    private func originPoint(at relativePoint: UnitPoint, in size: CGSize) -> CGPoint {
-        let minX: CGFloat = 0.0
-        let minY: CGFloat = 0.0
-        let maxX = size.width - initialSize.width
-        let maxY = size.height - initialSize.height
-        
-        return CGPoint(
-            x: (size.width * relativePoint.x - (initialSize.width * 0.5)).clamped(in: minX...maxX),
-            y: (size.height * relativePoint.y - (initialSize.height * 0.5)).clamped(in: minY...maxY)
+    private func destinationRect(
+        from originRect: CGRect,
+        in environment: PresentationTransitionEnvironment
+    ) -> CGRect {
+        var destinationRect = environment.geometry.frame
+        let additonalSize = CGSize(
+            width: abs(anchor.x - 0.5) * destinationRect.width,
+            height: abs(anchor.y - 0.5) * destinationRect.height
         )
+        
+        destinationRect.size.width += additonalSize.width
+        destinationRect.size.height += additonalSize.height
+        destinationRect = destinationRect.maximalContainerSquare
+            .scaled(
+                by: fittingShapeScale(in: environment)
+            )
+        
+        destinationRect.center = destinationCenter(
+            relativeTo: originRect,
+            in: environment
+        )
+        
+        return destinationRect
     }
     
-    private func destinationRect(from originRect: CGRect, with size: CGSize) -> CGRect {
-        let maximalSize = max(size.width, size.height) * finalShapeScale
-        let maximalSquareSize = CGSize(
-            width: maximalSize,
-            height: maximalSize
-        )
+    private func destinationCenter(
+        relativeTo origin: CGRect,
+        in environment: PresentationTransitionEnvironment
+    ) -> CGPoint {
         
-        let origin = CGPoint(
-            x: originRect.minX - (maximalSquareSize.width * 0.5 - originRect.width * 0.5),
-            y: 0
-        )
-        
-        return CGRect(origin: origin, size: maximalSquareSize)
+        return origin.center
+    }
+    
+    private func fittingShapeScale(
+        in environment: PresentationTransitionEnvironment
+    ) -> CGFloat {
+        let rect = environment.geometry.frame.maximalContainerSquare
+        let fittingRect = maximalFittingRect(rect)
+        let deltaScale = fittingRect.width / rect.width
+        return 1 + deltaScale
     }
 }
+
+// MARK: RevealMaskShape
+
+/// A shape that can be used as a clip mask.
+public protocol RevealMaskShape: Shape {
+    
+    /// An approximation of the largest rectangle that fits in the inside of the shape when drawn in the given rect.
+    /// - Parameter rect: The rect that the shape will be drawn in.
+    /// - Returns: The largest rectangle that fits in the inside of the shape.
+    func maximalFittingRect(in rect: CGRect) -> CGRect
+}
+
+extension Rectangle: RevealMaskShape {
+    
+    public func maximalFittingRect(in rect: CGRect) -> CGRect {
+        return rect
+    }
+}
+
+extension RoundedRectangle: RevealMaskShape {
+    
+    public func maximalFittingRect(in rect: CGRect) -> CGRect {
+        var rect = rect
+        let squareRootOfTwo = sqrt(2)
+        let circleRadii = CGSize(
+            width: cornerSize.width + (cornerSize.width * squareRootOfTwo),
+            height: cornerSize.height + (cornerSize.height * squareRootOfTwo)
+        )
+        
+        let minimumWidth = rect.width - circleRadii.width
+        let roundedComponentWidth = squareRootOfTwo * circleRadii.width
+        let minimumHeight = rect.height - circleRadii.height
+        let roundedComponentHeight = squareRootOfTwo * circleRadii.height
+        rect.size.width = minimumWidth + (roundedComponentWidth * 0.5)
+        rect.size.height = minimumHeight + (roundedComponentHeight * 0.5)
+        
+        return rect
+    }
+}
+
+extension Circle: RevealMaskShape {
+    
+    public func maximalFittingRect(in rect: CGRect) -> CGRect {
+        var rect = rect
+        let squareRootOfTwo = sqrt(2)
+        let radius = min(rect.width, rect.height)
+        rect.size.width = squareRootOfTwo * (radius * 0.5)
+        rect.size.height = squareRootOfTwo * (radius * 0.5)
+        
+        return rect
+    }
+}
+
+extension Ellipse: RevealMaskShape {
+    
+    public func maximalFittingRect(in rect: CGRect) -> CGRect {
+        var rect = rect
+        let squareRootOfTwo = sqrt(2)
+        rect.size.width = squareRootOfTwo * (rect.width * 0.5)
+        rect.size.height = squareRootOfTwo * (rect.height * 0.5)
+        
+        return rect
+    }
+}
+
+// MARK: Preview
 
 #Preview {
-    ModalsPlayground()
-}
-
-struct ModalsPlayground: View {
-    
-    struct DismissButton: View {
-        @Environment(\.presentationMode)
-        private var presentationMode
-        
-        var body: some View {
-            Button("Dismiss") {
-                presentationMode.wrappedValue.dismiss()
-            }
-        }
-    }
-    
-    @State
-    private var show = false
-    
-    private var transition: AnyPresentationTransition {
-//        .reveal(anchor: .center)
-        .opacity
-    }
-    
-    var body: some View {
-        VStack {
-            Button(show ? "Hide" : "Show") {
-                show.toggle()
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .animation(.default, value: show)
-        .modal(isPresented: $show) {
-            VStack {
-                Text("Hello World!")
-                DismissButton()
-            }
-            .modalBackdrop(.blue.opacity(0.5))
+    ModalsPlayground { modal in
+        modal
+            .modalBackdrop(.gray.opacity(0.33))
             .modalTransition(
-                transition.animation(
-                    .easeIn(duration: 3)
+                .reveal.animation(
+                    .easeIn(duration: 0.3)
                 )
             )
-        }
     }
 }
 
@@ -154,10 +188,25 @@ struct ModalsPlayground: View {
 extension AnyPresentationTransition {
     
     static var reveal: AnyPresentationTransition {
-        RevealPresentationTransition(shape: Circle()).erased()
+        RevealPresentationTransition(
+            shape: Circle()
+        ).erased()
     }
     
-    static func reveal(anchor: UnitPoint, size: CGSize = .zero) -> AnyPresentationTransition {
-        RevealPresentationTransition(shape: Circle(), anchor: anchor, initialSize: size).erased()
+    static func reveal(anchor: UnitPoint) -> AnyPresentationTransition {
+        RevealPresentationTransition(
+            shape: Circle(),
+            anchor: anchor
+        ).erased()
+    }
+    
+    static func reveal<ClipShape: RevealMaskShape>(
+        clipShape: ClipShape,
+        anchor: UnitPoint = .center
+    ) -> AnyPresentationTransition {
+        RevealPresentationTransition(
+            shape: clipShape,
+            anchor: anchor
+        ).erased()
     }
 }

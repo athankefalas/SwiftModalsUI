@@ -228,14 +228,12 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 in: environment
             )
             
-            presentedView.layer.zPosition = .greatestFiniteMagnitude
+            presentedView.layer.zPosition = (CGFloat.greatestFiniteMagnitude - 1)
             
             animateView(using: animation) {
                 presenterView.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
             }
-            
-            print(transitionContext.containerView.subviews.map({ "\(type(of: $0))" }))
-            
+                        
             animator = PlatformAnimator(
                 animation: animation,
                 layer: presentedView.layer,
@@ -260,26 +258,26 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             context: UIViewControllerContextTransitioning?
         ) -> PresentationTransitionEnvironment {
             
-            guard let containerView = context?.containerView else {
-                return PresentationTransitionEnvironment(
-                    intent: isPresented ? .insertion : .removal,
-                    geometry: PresentationTransitionEnvironment.Geometry.zero,
-                    colorScheme: .light
-                )
-            }
+            let containerView = context?.containerView
+            let frame = containerView?.frame ?? .zero
+            let safeAreaInsets = containerView?.safeAreaInsets ?? .zero
+            let traitCollection = containerView?.traitCollection ?? UITraitCollection()
             
             return PresentationTransitionEnvironment(
                 intent: isPresented ? .insertion : .removal,
                 geometry: PresentationTransitionEnvironment.Geometry(
-                    frame: containerView.frame,
+                    frame: frame,
                     safeAreaInsets: EdgeInsets(
-                        top: containerView.safeAreaInsets.top,
-                        leading: containerView.safeAreaInsets.left,
-                        bottom: containerView.safeAreaInsets.bottom,
-                        trailing: containerView.safeAreaInsets.right
+                        top: safeAreaInsets.top,
+                        leading: safeAreaInsets.left,
+                        bottom: safeAreaInsets.bottom,
+                        trailing: safeAreaInsets.right
                     )
                 ),
-                colorScheme: containerView.traitCollection.userInterfaceStyle == .light ? .light : .dark
+                colorScheme: traitCollection.userInterfaceStyle == .light ? .light : .dark,
+                horizontalSizeClass: traitCollection.horizontalSizeClass == .compact ? .compact : .regular,
+                verticalSizeClass: traitCollection.verticalSizeClass == .compact ? .compact : .regular,
+                layoutDirection: traitCollection.layoutDirection == .leftToRight ? .leftToRight : .rightToLeft
             )
         }
         
