@@ -17,7 +17,7 @@ struct FlipPresentationTransition: PresentationTransition {
         self.edge = edge
     }
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         

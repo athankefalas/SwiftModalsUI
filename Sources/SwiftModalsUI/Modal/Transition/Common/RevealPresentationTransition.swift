@@ -24,7 +24,7 @@ struct RevealPresentationTransition: PresentationTransition {
         self.maximalFittingRect = { shape.maximalFittingRect(in: $0) }
     }
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         
@@ -166,20 +166,6 @@ extension Ellipse: RevealMaskShape {
         rect.size.height = squareRootOfTwo * (rect.height * 0.5)
         
         return rect
-    }
-}
-
-// MARK: Preview
-
-#Preview {
-    ModalsPlayground { modal in
-        modal
-            .modalBackdrop(.gray.opacity(0.33))
-            .modalTransition(
-                .reveal.animation(
-                    .easeIn(duration: 0.3)
-                )
-            )
     }
 }
 

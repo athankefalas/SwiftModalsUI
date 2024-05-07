@@ -17,7 +17,7 @@ struct ScalePresentationTransition: PresentationTransition {
         self.scale = scale
     }
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         

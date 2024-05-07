@@ -78,6 +78,44 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         )
     }
     
+    private class PresentingSnapshot: UIView {
+        
+        var snapshotProvider: () -> UIView = { UIView() }
+        
+        convenience init(snapshotProvider: @escaping () -> UIView) {
+            self.init()
+            backgroundColor = .clear
+            self.snapshotProvider = snapshotProvider
+            self.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            subviews.forEach({ $0.frame = bounds })
+        }
+        
+        override func setNeedsDisplay() {
+            subviews.forEach({ $0.setNeedsDisplay() })
+            super.setNeedsDisplay()
+        }
+        
+        func updateSnapshot() {
+            let snapshot = snapshotProvider()
+            subviews.forEach({ $0.removeFromSuperview() })
+            
+            addSubview(snapshot)
+            
+            snapshot.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            snapshot.frame = bounds
+        }
+        
+        func dismantle() {
+            snapshotProvider = { UIView() }
+            subviews.forEach({ $0.removeFromSuperview() })
+            removeFromSuperview()
+        }
+    }
+    
     private class PresentationController: UIPresentationController {
         
         struct BackdropContent: View {
@@ -104,7 +142,22 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             self.backdropHost = UIHostingController(rootView: BackdropContent(background: backdrop))
             
             super.init(presentedViewController: presentedViewController, presenting: viewController)
+            
+            presentingViewSnapshot.snapshotProvider = {
+                let presentingView = self.presentingViewController.view ?? UIView()
+                let originalAlpha = presentingView.alpha
+                presentingView.alpha = 1
+                
+                let snapshot = presentingView.snapshotView(afterScreenUpdates: true) ?? UIView()
+                presentingView.alpha = originalAlpha
+                
+                return snapshot
+            }
         }
+        
+        private var presentingViewSnapshot: PresentingSnapshot = {
+            return PresentingSnapshot { UIView() }
+        }()
         
         private lazy var backdropView: UIView = {
             backdropHost.loadView()
@@ -130,6 +183,13 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 return
             }
             
+            scheduleSnapshotUpdates()
+            presentingViewController.view.tintAdjustmentMode = .dimmed
+            presentingViewSnapshot.frame = containerView.bounds
+            presentingViewSnapshot.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            presentingViewSnapshot.updateSnapshot()
+            containerView.addSubview(presentingViewSnapshot)
+            
             backdropView.alpha = 0
             backdropView.frame = containerView.bounds
             backdropView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -145,6 +205,41 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             }
         }
         
+        private func scheduleSnapshotUpdates() {
+            DispatchQueue.main.async {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.presentingViewSnapshot.updateSnapshot()
+            }
+        }
+        
+        override func presentationTransitionDidEnd(_ completed: Bool) {
+            super.presentationTransitionDidEnd(completed)
+            presentingViewSnapshot.updateSnapshot()
+        }
+        
         override func dismissalTransitionWillBegin() {
             super.dismissalTransitionWillBegin()
             
@@ -158,6 +253,12 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             coordinator.animate { _ in
                 self.backdropView.alpha = 0
             }
+        }
+        
+        override func dismissalTransitionDidEnd(_ completed: Bool) {
+            super.dismissalTransitionDidEnd(completed)
+            presentingViewSnapshot.dismantle()
+            backdropView.removeFromSuperview()
         }
         
         @objc private func requestDismiss() {
@@ -178,7 +279,8 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         
         let isPresented: Bool
         let transition: AnyPresentationTransition
-        private var animator: PlatformAnimator?
+        private var modalAnimator: PlatformAnimator?
+        private var modalPresenterAnimator: PlatformAnimator?
         
         init(isPresented: Bool, transition: AnyPresentationTransition) {
             self.isPresented = isPresented
@@ -206,52 +308,153 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 context: transitionContext
             )
             
-            if isInsertion {
-                transitionContext.containerView.addSubview(destination.view)
-                destination.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            }
+            let hierachy = containerHierarchy(
+                isInsertion: isInsertion,
+                containerView: transitionContext.containerView,
+                origin: origin,
+                destination: destination
+            )
             
-            destination.view.frame = transitionContext.containerView.bounds
-            transitionContext.containerView.layoutIfNeeded()
-            
-            guard let presentedView = isInsertion ? destination.view : origin.view,
-                  let presenterView = isInsertion ? origin.view : destination.view else {
-                transitionContext.completeTransition(false)
-                return
-            }
-            
+            let presentedView = hierachy.presentedView
+            let presentingView = hierachy.presentingView
             let animation = transition.resolvedAnimation(
                 in: environment
             )
             
-            let layerAnimators = transition.resolvedLayerTransitionAnimator(
+            let modalLayerAnimators = transition.resolvedModalLayerTransitionAnimator(
                 in: environment
             )
             
-            presentedView.layer.zPosition = (CGFloat.greatestFiniteMagnitude - 1)
+            let modalPresenterLayerAnimators = transition.resolvedModalPresenterLayerTransitionAnimator(
+                in: environment
+            )
             
-            animateView(using: animation) {
-                presenterView.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
-            }
+            transitionContext.containerView.setNeedsDisplay()
+            presentedView.layer.zPosition = (CGFloat.greatestFiniteMagnitude - 1)
                         
-            animator = PlatformAnimator(
+            modalAnimator = PlatformAnimator(
                 animation: animation,
+                animationKey: "_transition_modalLayerAnimation",
                 layer: presentedView.layer,
-                layerAnimators: layerAnimators.reduced()
+                layerAnimators: modalLayerAnimators.reduced()
             ) { finished in
-                
-                if !isInsertion {
-                    presentedView.removeFromSuperview()
-                }
                 
                 transitionContext.completeTransition(finished)
                 presentedView.layer.zPosition = 0
+                hierachy.restorationHandler()
                 
-                self.animator?.cancelAnimation()
-                self.animator = nil
+                self.modalAnimator?.cancelAnimation()
+                self.modalAnimator = nil
             }
             
-            animator?.animate()
+            modalPresenterAnimator = PlatformAnimator(
+                animation: animation,
+                animationKey: "_transition_modalPresenterLayerAnimation",
+                layer: presentingView.layer,
+                layerAnimators: modalPresenterLayerAnimators
+            ) { finished in
+                
+                self.modalPresenterAnimator?.cancelAnimation()
+                self.modalPresenterAnimator = nil
+            }
+            
+            // Animations
+            let tintAdjustingView = isInsertion ? origin.view : destination.view
+            
+            animateView(using: animation) {
+                tintAdjustingView?.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
+            }
+            
+            modalAnimator?.animate()
+            modalPresenterAnimator?.animate()
+        }
+        
+        struct ContainerHierarchy {
+            let presentingView: UIView
+            let presentedView: UIView
+            let restorationHandler: () -> Void
+            
+            init(
+                presentingView: UIView,
+                presentedView: UIView,
+                restorationHandler: @escaping () -> Void = {}
+            ) {
+                self.presentingView = presentingView
+                self.presentedView = presentedView
+                self.restorationHandler = restorationHandler
+            }
+        }
+        
+        private func containerHierarchy(
+            isInsertion: Bool,
+            containerView: UIView,
+            origin: UIViewController,
+            destination: UIViewController
+        ) -> ContainerHierarchy {
+            
+            if isInsertion {
+                return makeInsertionContainerHierarchy(
+                    containerView: containerView,
+                    origin: origin,
+                    destination: destination
+                )
+            }
+            
+            return makeRemovalContainerHierarchy(
+                containerView: containerView,
+                origin: origin,
+                destination: destination
+            )
+        }
+        
+        private func makeInsertionContainerHierarchy(
+            containerView: UIView,
+            origin: UIViewController,
+            destination: UIViewController
+        ) -> ContainerHierarchy {
+            
+            let presentedView = destination.view ?? UIView()
+            let presentingViewSnapshot = containerView.subviews
+                .compactMap({ $0 as? PresentingSnapshot })
+                .first!
+            
+            containerView.layoutIfNeeded()
+            
+            origin.view.alpha = 0
+            presentedView.frame = containerView.bounds
+            presentedView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            containerView.addSubview(presentedView)
+            
+            return ContainerHierarchy(
+                presentingView: presentingViewSnapshot,
+                presentedView: presentedView
+            ) {
+                origin.view.alpha = 1
+            }
+        }
+        
+        private func makeRemovalContainerHierarchy(
+            containerView: UIView,
+            origin: UIViewController,
+            destination: UIViewController
+        ) -> ContainerHierarchy {
+            
+            let presentedView = origin.view ?? UIView()
+            let presentingViewSnapshot = containerView.subviews
+                .compactMap({ $0 as? PresentingSnapshot })
+                .first!
+            
+            containerView.layoutIfNeeded()
+            presentingViewSnapshot.updateSnapshot()
+            destination.view.alpha = 0
+            
+            return ContainerHierarchy(
+                presentingView: presentingViewSnapshot,
+                presentedView: presentedView
+            ) {
+                destination.view.alpha = 1
+                presentedView.removeFromSuperview()
+            }
         }
         
         private func makePresentationTransitionEnvironment(

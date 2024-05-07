@@ -35,15 +35,15 @@ struct AsymmetricPresentationTransition: PresentationTransition {
         }
     }
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         
         switch environment.intent {
         case .insertion:
-            return insertion.resolvedLayerTransitionAnimator(in: environment)
+            return insertion.resolvedModalLayerTransitionAnimator(in: environment)
         case .removal:
-            return removal.resolvedLayerTransitionAnimator(in: environment)
+            return removal.resolvedModalLayerTransitionAnimator(in: environment)
         }
     }
 }

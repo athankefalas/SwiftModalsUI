@@ -16,7 +16,11 @@ protocol PresentationTransition {
         in environment: PresentationTransitionEnvironment
     ) -> PresentationAnimation
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [LayerTransitionAnimator]
+    
+    func resolvedModalPresenterLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [LayerTransitionAnimator]
 }
@@ -27,5 +31,12 @@ extension PresentationTransition {
         in environment: PresentationTransitionEnvironment
     ) -> PresentationAnimation {
         return .default
+    }
+    
+    func resolvedModalPresenterLayerTransitionAnimator(
+        in environment: PresentationTransitionEnvironment
+    ) -> [LayerTransitionAnimator] {
+        print("Ext")
+        return []
     }
 }

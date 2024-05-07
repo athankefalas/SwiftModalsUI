@@ -15,7 +15,7 @@ struct OpacityPresentationTransition: PresentationTransition {
         self.id = .combining("Opacity")
     }
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         

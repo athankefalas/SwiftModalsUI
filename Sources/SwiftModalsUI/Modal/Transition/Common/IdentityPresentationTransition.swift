@@ -20,7 +20,7 @@ struct IdentityPresentationTransition: PresentationTransition {
         return .linear(duration: 0)
     }
     
-    func resolvedLayerTransitionAnimator(
+    func resolvedModalLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [any LayerTransitionAnimator] {
         

@@ -31,12 +31,27 @@ struct ModalsPlayground<Modal: View>: View {
     
     var body: some View {
         VStack {
-            Button(show ? "Hide" : "Show") {
+            Spacer()
+            
+            Button {
                 show.toggle()
+            } label: {
+                Text(show ? "Hide" : "Show")
+                    .padding(.horizontal, 16)
             }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 16)
+            .foregroundColor(.white)
+            .background(
+                RoundedRectangle(cornerRadius: 16.0)
+                    .fill(Color.accentColor)
+            )
+            
+            Spacer()
         }
         .frame(maxWidth: .infinity)
         .animation(.default, value: show)
+        .background(Color.gray.opacity(0.2).edgesIgnoringSafeArea(.all))
         .modal(isPresented: $show) {
             modalModifier(AnyView(modalContent))
         }

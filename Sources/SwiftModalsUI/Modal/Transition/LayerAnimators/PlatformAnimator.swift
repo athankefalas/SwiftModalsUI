@@ -9,20 +9,21 @@ import SwiftUI
 
 class PlatformAnimator: NSObject, CAAnimationDelegate {
     
-    private static let transitionAnimationKey = "_transition_layerAnimation"
-    
     private let animation: PresentationAnimation
+    private let animationKey: String
     private weak var layer: CALayer?
     private let layerAnimators: [any LayerTransitionAnimator]
     private let animationCompletion: (Bool) -> Void
     
     init(
         animation: PresentationAnimation,
+        animationKey: String,
         layer: CALayer,
         layerAnimators: [any LayerTransitionAnimator],
         animationCompletion: @escaping (Bool) -> Void
     ) {
         self.animation = animation
+        self.animationKey = animationKey
         self.layer = layer
         self.layerAnimators = layerAnimators
         self.animationCompletion = animationCompletion
@@ -35,7 +36,7 @@ class PlatformAnimator: NSObject, CAAnimationDelegate {
             return
         }
         
-        layer.removeAnimation(forKey: Self.transitionAnimationKey)
+        layer.removeAnimation(forKey: animationKey)
         
         let layerAnimations = layerAnimators
             .map({ $0.makePrepared(presentationAnimation: animation, for: layer) })
@@ -46,12 +47,12 @@ class PlatformAnimator: NSObject, CAAnimationDelegate {
         CATransaction.begin()
         layerAnimators.forEach({ $0.animate(layer: layer) })
         
-        layer.add(animationGroup, forKey: Self.transitionAnimationKey)
+        layer.add(animationGroup, forKey: animationKey)
         CATransaction.commit()
     }
     
     func cancelAnimation() {
-        layer?.removeAnimation(forKey: Self.transitionAnimationKey)
+        layer?.removeAnimation(forKey: animationKey)
         layer = nil
     }
     
