@@ -7,17 +7,17 @@
 
 import SwiftUI
 
-class MaskLayerTransitionAnimator: LayerTransitionAnimator {
+public class MaskLayerTransitionAnimator: LayerTransitionAnimator {
     
     private static let animationKey = "_transition_maskAnimation"
     
-    let id: AnyHashable
+    public let id: AnyHashable
     
     private let maskLayer: CALayer
     private let maskLayerAnimator: any LayerTransitionAnimator
     private var maskLayerAnimation: CAAnimation?
     
-    init<Mask: CALayer>(
+    public init<Mask: CALayer>(
         maskLayer: @autoclosure () -> Mask,
         maskLayerAnimator: (Mask) -> any LayerTransitionAnimator
     ) {
@@ -30,7 +30,7 @@ class MaskLayerTransitionAnimator: LayerTransitionAnimator {
         self.maskLayerAnimator = maskLayerAnimator
     }
     
-    func makePrepared(
+    public func makePrepared(
         presentationAnimation: PresentationAnimation,
         for layer: CALayer
     ) -> CAAnimation {
@@ -48,7 +48,7 @@ class MaskLayerTransitionAnimator: LayerTransitionAnimator {
         )
     }
     
-    func animate(layer: CALayer) {
+    public func animate(layer: CALayer) {
         maskLayerAnimator.animate(layer: maskLayer)
         
         guard let maskLayerAnimation else {
@@ -58,7 +58,7 @@ class MaskLayerTransitionAnimator: LayerTransitionAnimator {
         maskLayer.add(maskLayerAnimation, forKey: Self.animationKey)
     }
     
-    func didStart(
+    public func didStart(
         animation: CAAnimation,
         in layer: CALayer
     ) {
@@ -69,7 +69,7 @@ class MaskLayerTransitionAnimator: LayerTransitionAnimator {
         )
     }
     
-    func didComplete(
+    public func didComplete(
         animation: CAAnimation,
         in layer: CALayer,
         toCompletion finished: Bool

@@ -30,7 +30,7 @@ struct IdentityPresentationTransition: PresentationTransition {
 
 // MARK: Identity Extentensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static var identity: AnyPresentationTransition {
         IdentityPresentationTransition().erased()

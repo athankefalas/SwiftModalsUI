@@ -5,12 +5,12 @@
 //  Created by Αθανάσιος Κεφαλάς on 24/4/24.
 //
 
-import UIKit
 import SwiftUI
 
-protocol PresentationTransition {
+public protocol PresentationTransition {
     
     var id: AnyHashable { get }
+    var animatesModalPresenter: Bool { get }
     
     func resolvedAnimation(
         in environment: PresentationTransitionEnvironment
@@ -25,7 +25,9 @@ protocol PresentationTransition {
     ) -> [LayerTransitionAnimator]
 }
 
-extension PresentationTransition {
+public extension PresentationTransition {
+    
+    var animatesModalPresenter: Bool { false }
     
     func resolvedAnimation(
         in environment: PresentationTransitionEnvironment
@@ -36,7 +38,6 @@ extension PresentationTransition {
     func resolvedModalPresenterLayerTransitionAnimator(
         in environment: PresentationTransitionEnvironment
     ) -> [LayerTransitionAnimator] {
-        print("Ext")
         return []
     }
 }

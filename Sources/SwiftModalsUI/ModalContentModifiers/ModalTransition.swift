@@ -27,7 +27,7 @@ struct ModalTransitionPreferenceKey: PreferenceKey {
     }
 }
 
-extension View {
+public extension View {
     
     func modalTransition(_ transition: AnyPresentationTransition) -> some View {
         self.transformPreference(ModalTransitionPreferenceKey.self) { value in

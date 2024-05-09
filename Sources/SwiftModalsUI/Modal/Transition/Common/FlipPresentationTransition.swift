@@ -35,6 +35,7 @@ struct FlipPresentationTransition: PresentationTransition {
         _ environment: PresentationTransitionEnvironment
     ) -> CATransform3D {
         
+        let effectiveEdge = environment.layoutDirectionRelativeEdge(edge)
         let rotationDegrees = Angle(
             degrees: 90.0
         )
@@ -42,13 +43,16 @@ struct FlipPresentationTransition: PresentationTransition {
         return CATransform3DRotate(
             CATransform3DIdentity,
             rotationDegrees.radians,
-            xAxisRotation(),
-            yAxisRotation(),
+            xAxisRotation(edge: effectiveEdge),
+            yAxisRotation(edge: effectiveEdge),
             0
         )
     }
     
-    private func xAxisRotation() -> CGFloat {
+    private func xAxisRotation(
+        edge: Edge
+    ) -> CGFloat {
+        
         guard edge == .top || edge == .bottom else {
             return 0
         }
@@ -56,7 +60,10 @@ struct FlipPresentationTransition: PresentationTransition {
         return edge == .top ? 1 : -1
     }
     
-    private func yAxisRotation() -> CGFloat {
+    private func yAxisRotation(
+        edge: Edge
+    ) -> CGFloat {
+        
         guard edge == .leading || edge == .trailing else {
             return 0
         }
@@ -67,7 +74,7 @@ struct FlipPresentationTransition: PresentationTransition {
 
 // MARK: Flip Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static var flip: AnyPresentationTransition {
         .flip(edge: .trailing)

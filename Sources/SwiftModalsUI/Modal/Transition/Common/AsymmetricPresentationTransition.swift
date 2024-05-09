@@ -9,6 +9,7 @@ import Foundation
 
 struct AsymmetricPresentationTransition: PresentationTransition {
     let id: AnyHashable
+    var animatesModalPresenter: Bool
     
     private let insertion: AnyPresentationTransition
     private let removal: AnyPresentationTransition
@@ -19,6 +20,7 @@ struct AsymmetricPresentationTransition: PresentationTransition {
     ) {
         
         self.id = .combining("Asymmetric", insertion.id, removal.id)
+        self.animatesModalPresenter = insertion.animatesModalPresenter || removal.animatesModalPresenter
         self.insertion = insertion.erased()
         self.removal = removal.erased()
     }
@@ -46,15 +48,24 @@ struct AsymmetricPresentationTransition: PresentationTransition {
             return removal.resolvedModalLayerTransitionAnimator(in: environment)
         }
     }
+    
+    func resolvedModalPresenterLayerTransitionAnimator(in environment: PresentationTransitionEnvironment) -> [any LayerTransitionAnimator] {
+        switch environment.intent {
+        case .insertion:
+            return insertion.resolvedModalPresenterLayerTransitionAnimator(in: environment)
+        case .removal:
+            return removal.resolvedModalPresenterLayerTransitionAnimator(in: environment)
+        }
+    }
 }
 
 // MARK: Asymmetric Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
-    static func asymmetric<Insertion: PresentationTransition, Removal: PresentationTransition>(
-        insertion: Insertion,
-        removal: Removal
+    static func asymmetric(
+        insertion: AnyPresentationTransition,
+        removal: AnyPresentationTransition
     ) -> AnyPresentationTransition {
         
         AsymmetricPresentationTransition(

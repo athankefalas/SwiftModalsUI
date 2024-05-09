@@ -9,31 +9,46 @@ import SwiftUI
 
 fileprivate struct ModalModifier<ModalContent: View>: ViewModifier {
     
-    let isPresented: Binding<Bool>
+    @Binding
+    private var isPresented: Bool
+    
     let onDismiss: (() -> Void)?
     let modalContent: () -> ModalContent
+    
+    private var id: AnyHashable {
+        .combining(isPresented, "\(ModalContent.self)", onDismiss == nil)
+    }
     
     init(
         isPresented: Binding<Bool>,
         onDismiss: (() -> Void)?,
         modalContent: @escaping () -> ModalContent
     ) {
-        self.isPresented = isPresented
+        self._isPresented = isPresented
         self.onDismiss = onDismiss
         self.modalContent = modalContent
     }
     
     func body(content: Content) -> some View {
+#if canImport(UIKit)
         content.overlay (
             ModalContentPresenter(
-                isPresented: isPresented,
+                isPresented: $isPresented,
                 onDismiss: onDismiss,
                 content: modalContent
             )
+            .id(id)
             .opacity(0)
             .frame(width: 0, height: 0)
             .fallbackAccessibilityHidden(true)
         )
+#else
+            content.sheet(
+                isPresented: isPresented,
+                onDismiss: onDismiss,
+                content: modalContent
+            )
+#endif
     }
 }
 

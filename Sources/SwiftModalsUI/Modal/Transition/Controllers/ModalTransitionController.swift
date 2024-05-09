@@ -5,6 +5,8 @@
 //  Created by Αθανάσιος Κεφαλάς on 24/4/24.
 //
 
+#if canImport(UIKit)
+
 import UIKit
 import SwiftUI
 
@@ -41,7 +43,8 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         let presentationController = PresentationController(
             presentedViewController: presented,
             presenting: presenting,
-            backdrop: modalBackdrop ?? AnyShapeStyleBox(.clear)
+            backdrop: modalBackdrop ?? AnyShapeStyleBox(.clear),
+            animatesModalPresenter: transition?.animatesModalPresenter ?? false
         )
         
         self.presentationController = presentationController
@@ -132,23 +135,30 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         
         private var backdrop: AnyShapeStyleBox
         private let backdropHost: UIHostingController<BackdropContent>
+        private let animatesModalPresenter: Bool
         
         init(
             presentedViewController: UIViewController,
             presenting viewController: UIViewController?,
-            backdrop: AnyShapeStyleBox
+            backdrop: AnyShapeStyleBox,
+            animatesModalPresenter: Bool
         ) {
             self.backdrop = backdrop
             self.backdropHost = UIHostingController(rootView: BackdropContent(background: backdrop))
+            self.animatesModalPresenter = animatesModalPresenter
             
             super.init(presentedViewController: presentedViewController, presenting: viewController)
+            
+            guard animatesModalPresenter else {
+                return
+            }
             
             presentingViewSnapshot.snapshotProvider = {
                 let presentingView = self.presentingViewController.view ?? UIView()
                 let originalAlpha = presentingView.alpha
                 presentingView.alpha = 1
                 
-                let snapshot = presentingView.snapshotView(afterScreenUpdates: true) ?? UIView()
+                let snapshot = presentingView.snapshotView(afterScreenUpdates: false) ?? UIView()
                 presentingView.alpha = originalAlpha
                 
                 return snapshot
@@ -183,12 +193,13 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 return
             }
             
-            scheduleSnapshotUpdates()
-            presentingViewController.view.tintAdjustmentMode = .dimmed
-            presentingViewSnapshot.frame = containerView.bounds
-            presentingViewSnapshot.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            presentingViewSnapshot.updateSnapshot()
-            containerView.addSubview(presentingViewSnapshot)
+            if animatesModalPresenter {
+                presentingViewController.view.tintAdjustmentMode = .dimmed
+                presentingViewSnapshot.frame = containerView.bounds
+                presentingViewSnapshot.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                presentingViewSnapshot.updateSnapshot()
+                containerView.addSubview(presentingViewSnapshot)
+            }
             
             backdropView.alpha = 0
             backdropView.frame = containerView.bounds
@@ -205,36 +216,6 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             }
         }
         
-        private func scheduleSnapshotUpdates() {
-            DispatchQueue.main.async {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.presentingViewSnapshot.updateSnapshot()
-            }
-        }
-        
         override func presentationTransitionDidEnd(_ completed: Bool) {
             super.presentationTransitionDidEnd(completed)
             presentingViewSnapshot.updateSnapshot()
@@ -243,6 +224,7 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         override func dismissalTransitionWillBegin() {
             super.dismissalTransitionWillBegin()
             
+            presentingViewSnapshot.updateSnapshot()
             backdropView.alpha = 1
             
             guard let coordinator = presentedViewController.transitionCoordinator else {
@@ -277,6 +259,22 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
     
     private class TransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
         
+        private struct ContainerHierarchy {
+            let presentingView: UIView
+            let presentedView: UIView
+            let restorationHandler: () -> Void
+            
+            init(
+                presentingView: UIView,
+                presentedView: UIView,
+                restorationHandler: @escaping () -> Void = {}
+            ) {
+                self.presentingView = presentingView
+                self.presentedView = presentedView
+                self.restorationHandler = restorationHandler
+            }
+        }
+        
         let isPresented: Bool
         let transition: AnyPresentationTransition
         private var modalAnimator: PlatformAnimator?
@@ -310,6 +308,7 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             
             let hierachy = containerHierarchy(
                 isInsertion: isInsertion,
+                animatesModalPresenter: transition.animatesModalPresenter,
                 containerView: transitionContext.containerView,
                 origin: origin,
                 destination: destination
@@ -369,24 +368,9 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             modalPresenterAnimator?.animate()
         }
         
-        struct ContainerHierarchy {
-            let presentingView: UIView
-            let presentedView: UIView
-            let restorationHandler: () -> Void
-            
-            init(
-                presentingView: UIView,
-                presentedView: UIView,
-                restorationHandler: @escaping () -> Void = {}
-            ) {
-                self.presentingView = presentingView
-                self.presentedView = presentedView
-                self.restorationHandler = restorationHandler
-            }
-        }
-        
         private func containerHierarchy(
             isInsertion: Bool,
+            animatesModalPresenter: Bool,
             containerView: UIView,
             origin: UIViewController,
             destination: UIViewController
@@ -396,31 +380,37 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 return makeInsertionContainerHierarchy(
                     containerView: containerView,
                     origin: origin,
-                    destination: destination
+                    destination: destination,
+                    animatesModalPresenter: animatesModalPresenter
                 )
             }
             
             return makeRemovalContainerHierarchy(
                 containerView: containerView,
                 origin: origin,
-                destination: destination
+                destination: destination,
+                animatesModalPresenter: animatesModalPresenter
             )
         }
         
         private func makeInsertionContainerHierarchy(
             containerView: UIView,
             origin: UIViewController,
-            destination: UIViewController
+            destination: UIViewController,
+            animatesModalPresenter: Bool
         ) -> ContainerHierarchy {
             
-            let presentedView = destination.view ?? UIView()
-            let presentingViewSnapshot = containerView.subviews
+            let presentedView = destination.view!
+            let presentingViewSnapshot = animatesModalPresenter ? containerView.subviews
                 .compactMap({ $0 as? PresentingSnapshot })
-                .first!
+                .first! : origin.view!
             
             containerView.layoutIfNeeded()
             
-            origin.view.alpha = 0
+            if animatesModalPresenter {
+                origin.view.alpha = 0
+            }
+            
             presentedView.frame = containerView.bounds
             presentedView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             containerView.addSubview(presentedView)
@@ -429,6 +419,11 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
                 presentingView: presentingViewSnapshot,
                 presentedView: presentedView
             ) {
+                
+                guard animatesModalPresenter else {
+                    return
+                }
+                
                 origin.view.alpha = 1
             }
         }
@@ -436,23 +431,30 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         private func makeRemovalContainerHierarchy(
             containerView: UIView,
             origin: UIViewController,
-            destination: UIViewController
+            destination: UIViewController,
+            animatesModalPresenter: Bool
         ) -> ContainerHierarchy {
             
-            let presentedView = origin.view ?? UIView()
-            let presentingViewSnapshot = containerView.subviews
+            let presentedView = origin.view!
+            let presentingViewSnapshot = animatesModalPresenter ? containerView.subviews
                 .compactMap({ $0 as? PresentingSnapshot })
-                .first!
+                .first! : destination.view!
             
             containerView.layoutIfNeeded()
-            presentingViewSnapshot.updateSnapshot()
-            destination.view.alpha = 0
+            
+            if animatesModalPresenter {
+                destination.view.alpha = 0
+            }
             
             return ContainerHierarchy(
                 presentingView: presentingViewSnapshot,
                 presentedView: presentedView
             ) {
-                destination.view.alpha = 1
+                
+                if animatesModalPresenter {
+                    destination.view.alpha = 1
+                }
+                
                 presentedView.removeFromSuperview()
             }
         }
@@ -537,3 +539,5 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
         }
     }
 }
+
+#endif

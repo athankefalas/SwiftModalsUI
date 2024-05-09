@@ -46,7 +46,7 @@ struct ScalePresentationTransition: PresentationTransition {
 
 // MARK: Scale Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static var scale: AnyPresentationTransition {
         return .scale(scale: 0)

@@ -7,16 +7,18 @@
 
 import Foundation
 
-struct AnyPresentationTransition: PresentationTransition {
+public struct AnyPresentationTransition: PresentationTransition {
     
-    let id: AnyHashable
+    public let id: AnyHashable
+    public let animatesModalPresenter: Bool
     
     private let _resolveAnimation: (PresentationTransitionEnvironment) -> PresentationAnimation
     private let _resolveModalLayerAnimator: (PresentationTransitionEnvironment) -> [any LayerTransitionAnimator]
     private let _resolvedModalPresenterLayerTransitionAnimator: (PresentationTransitionEnvironment) -> [any LayerTransitionAnimator]
     
-    init<Transition: PresentationTransition>(_ transition: Transition) {
+    public init<Transition: PresentationTransition>(_ transition: Transition) {
         id = transition.id
+        animatesModalPresenter = transition.animatesModalPresenter
         _resolveAnimation = { transition.resolvedAnimation(in: $0) }
         _resolveModalLayerAnimator = { transition.resolvedModalLayerTransitionAnimator(in: $0) }
         _resolvedModalPresenterLayerTransitionAnimator = { transition.resolvedModalPresenterLayerTransitionAnimator(in: $0) }
@@ -24,30 +26,32 @@ struct AnyPresentationTransition: PresentationTransition {
     
     fileprivate init(
         id: AnyHashable,
+        animatesModalPresenter: Bool,
         resolveAnimation: @escaping (PresentationTransitionEnvironment) -> PresentationAnimation,
         resolveModalLayerAnimator: @escaping (PresentationTransitionEnvironment) -> [any LayerTransitionAnimator],
         resolvedModalPresenterLayerTransitionAnimator: @escaping (PresentationTransitionEnvironment) -> [any LayerTransitionAnimator]
     ) {
         self.id = id
+        self.animatesModalPresenter = animatesModalPresenter
         self._resolveAnimation = resolveAnimation
         self._resolveModalLayerAnimator = resolveModalLayerAnimator
         self._resolvedModalPresenterLayerTransitionAnimator = resolvedModalPresenterLayerTransitionAnimator
     }
     
-    func resolvedAnimation(in environment: PresentationTransitionEnvironment) -> PresentationAnimation {
+    public func resolvedAnimation(in environment: PresentationTransitionEnvironment) -> PresentationAnimation {
         _resolveAnimation(environment)
     }
     
-    func resolvedModalLayerTransitionAnimator(in environment: PresentationTransitionEnvironment) -> [any LayerTransitionAnimator] {
+    public func resolvedModalLayerTransitionAnimator(in environment: PresentationTransitionEnvironment) -> [any LayerTransitionAnimator] {
         _resolveModalLayerAnimator(environment)
     }
     
-    func resolvedModalPresenterLayerTransitionAnimator(in environment: PresentationTransitionEnvironment) -> [any LayerTransitionAnimator] {
+    public func resolvedModalPresenterLayerTransitionAnimator(in environment: PresentationTransitionEnvironment) -> [any LayerTransitionAnimator] {
         _resolvedModalPresenterLayerTransitionAnimator(environment)
     }
 }
 
-extension PresentationTransition {
+public extension PresentationTransition {
     
     func animation(_ animation: PresentationAnimation) -> AnyPresentationTransition {
         
@@ -55,7 +59,10 @@ extension PresentationTransition {
             return self.erased()
         }
         
-        return AnyPresentationTransition(id: .combining(id, animation)) { environment in
+        return AnyPresentationTransition(
+            id: .combining(id, animation),
+            animatesModalPresenter: animatesModalPresenter
+        ) { environment in
             animation
         } resolveModalLayerAnimator: { environment in
             resolvedModalLayerTransitionAnimator(in: environment)
@@ -74,7 +81,10 @@ extension PresentationTransition {
             return self.erased()
         }
         
-        return AnyPresentationTransition(id: .combining(id, other.id)) { environment in
+        return AnyPresentationTransition(
+            id: .combining(id, other.id),
+            animatesModalPresenter: animatesModalPresenter || other.animatesModalPresenter
+        ) { environment in
             other.resolvedAnimation(in: environment)
         } resolveModalLayerAnimator: { environment in
             resolvedModalLayerTransitionAnimator(in: environment) + other.resolvedModalLayerTransitionAnimator(in: environment)

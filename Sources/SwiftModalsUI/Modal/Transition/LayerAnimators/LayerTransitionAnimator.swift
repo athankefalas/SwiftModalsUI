@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-protocol LayerTransitionAnimator {
+public protocol LayerTransitionAnimator {
     
     var id: AnyHashable { get }
     
@@ -30,7 +30,7 @@ protocol LayerTransitionAnimator {
     )
 }
 
-extension LayerTransitionAnimator {
+public extension LayerTransitionAnimator {
     
     func didStart(
         animation: CAAnimation,
@@ -48,7 +48,7 @@ extension LayerTransitionAnimator {
     }
 }
 
-protocol MergableLayerTransitionAnimator: LayerTransitionAnimator {
+public protocol MergableLayerTransitionAnimator: LayerTransitionAnimator {
     
     var reduceIdentifier: AnyHashable { get }
     

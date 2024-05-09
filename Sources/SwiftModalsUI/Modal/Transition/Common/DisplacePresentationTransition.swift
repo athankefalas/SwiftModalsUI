@@ -12,6 +12,10 @@ struct DisplacePresentationTransition: PresentationTransition {
     let id: AnyHashable
     let edge: Edge
     
+    var animatesModalPresenter: Bool {
+        true
+    }
+    
     init(edge: Edge) {
         self.id = .combining("Displace", edge)
         self.edge = edge
@@ -35,15 +39,27 @@ struct DisplacePresentationTransition: PresentationTransition {
         _ environment: PresentationTransitionEnvironment
     ) -> CATransform3D {
         
+        let effectiveEdge = environment.layoutDirectionRelativeEdge(edge)
+        
         return CATransform3DTranslate(
             CATransform3DIdentity,
-            transformTranslationX(width: environment.geometry.frame.width),
-            transformTranslationY(height: environment.geometry.frame.height),
+            transformTranslationX(
+                edge: effectiveEdge,
+                width: environment.geometry.frame.width
+            ),
+            transformTranslationY(
+                edge: effectiveEdge,
+                height: environment.geometry.frame.height
+            ),
             0
         )
     }
     
-    private func transformTranslationX(width: CGFloat) -> CGFloat {
+    private func transformTranslationX(
+        edge: Edge,
+        width: CGFloat
+    ) -> CGFloat {
+        
         switch edge {
         case .top:
             return 0
@@ -56,7 +72,11 @@ struct DisplacePresentationTransition: PresentationTransition {
         }
     }
     
-    private func transformTranslationY(height: CGFloat) -> CGFloat {
+    private func transformTranslationY(
+        edge: Edge,
+        height: CGFloat
+    ) -> CGFloat {
+        
         switch edge {
         case .top:
             return -height
@@ -85,16 +105,27 @@ struct DisplacePresentationTransition: PresentationTransition {
     private func presenterTransform(
         _ environment: PresentationTransitionEnvironment
     ) -> CATransform3D {
+        let effectiveEdge = environment.layoutDirectionRelativeEdge(edge)
         
         return CATransform3DTranslate(
             CATransform3DIdentity,
-            presenterTransformTranslationX(width: environment.geometry.frame.width),
-            presenterTransformTranslationY(height: environment.geometry.frame.height),
+            presenterTransformTranslationX(
+                edge: effectiveEdge,
+                width: environment.geometry.frame.width
+            ),
+            presenterTransformTranslationY(
+                edge: effectiveEdge,
+                height: environment.geometry.frame.height
+            ),
             0
         )
     }
     
-    private func presenterTransformTranslationX(width: CGFloat) -> CGFloat {
+    private func presenterTransformTranslationX(
+        edge: Edge,
+        width: CGFloat
+    ) -> CGFloat {
+        
         switch edge {
         case .top:
             return 0
@@ -107,7 +138,11 @@ struct DisplacePresentationTransition: PresentationTransition {
         }
     }
     
-    private func presenterTransformTranslationY(height: CGFloat) -> CGFloat {
+    private func presenterTransformTranslationY(
+        edge: Edge,
+        height: CGFloat
+    ) -> CGFloat {
+        
         switch edge {
         case .top:
             return height
@@ -121,13 +156,12 @@ struct DisplacePresentationTransition: PresentationTransition {
     }
 }
 
-// MARK: Move Extensions
+// MARK: Displace Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static func displace(edge: Edge) -> AnyPresentationTransition {
         DisplacePresentationTransition(edge: edge).erased()
     }
 }
-
 

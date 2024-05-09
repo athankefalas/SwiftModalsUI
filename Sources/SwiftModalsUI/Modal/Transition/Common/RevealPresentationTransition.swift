@@ -171,7 +171,7 @@ extension Ellipse: RevealMaskShape {
 
 // MARK: Reveal Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static var reveal: AnyPresentationTransition {
         RevealPresentationTransition(

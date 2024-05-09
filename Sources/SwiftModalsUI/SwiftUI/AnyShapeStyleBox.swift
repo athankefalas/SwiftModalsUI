@@ -12,16 +12,19 @@ struct AnyShapeStyleBox: Hashable {
     let id: AnyHashable
     private let _view: AnyView?
     private let _shapeStyle: Any?
+    private let _shapeFill: ((AnyShape) -> AnyView)?
     
     init(_ color: Color) {
         self.id = color.runtimeIdentity
         
         if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
             self._view = nil
+            self._shapeFill = nil
             self._shapeStyle = AnyShapeStyle(color)
         } else { // Fallback on earlier versions
             self._view = AnyView(color)
             self._shapeStyle = nil
+            self._shapeFill = { AnyView($0.fill(color)) }
         }
     }
     
@@ -30,10 +33,12 @@ struct AnyShapeStyleBox: Hashable {
         
         if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
             self._view = nil
+            self._shapeFill = nil
             self._shapeStyle = AnyShapeStyle(gradient)
         } else { // Fallback on earlier versions
             self._view = AnyView(gradient)
             self._shapeStyle = nil
+            self._shapeFill = { AnyView($0.fill(gradient)) }
         }
     }
     
@@ -42,10 +47,12 @@ struct AnyShapeStyleBox: Hashable {
         
         if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
             self._view = nil
+            self._shapeFill = nil
             self._shapeStyle = AnyShapeStyle(gradient)
         } else { // Fallback on earlier versions
             self._view = AnyView(gradient)
             self._shapeStyle = nil
+            self._shapeFill = { AnyView($0.fill(gradient)) }
         }
     }
     
@@ -54,10 +61,12 @@ struct AnyShapeStyleBox: Hashable {
         
         if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
             self._view = nil
+            self._shapeFill = nil
             self._shapeStyle = AnyShapeStyle(gradient)
         } else { // Fallback on earlier versions
             self._view = AnyView(gradient)
             self._shapeStyle = nil
+            self._shapeFill = { AnyView($0.fill(gradient)) }
         }
     }
     
@@ -66,10 +75,12 @@ struct AnyShapeStyleBox: Hashable {
         
         if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
             self._view = nil
+            self._shapeFill = nil
             self._shapeStyle = AnyShapeStyle(imagePaint)
         } else { // Fallback on earlier versions
             self._view = AnyView(Rectangle().fill(imagePaint))
             self._shapeStyle = nil
+            self._shapeFill = { AnyView($0.fill(imagePaint)) }
         }
     }
     
@@ -77,6 +88,7 @@ struct AnyShapeStyleBox: Hashable {
     init<S: ShapeStyle>(_ style: S) {
         self.id = style.runtimeIdentity
         self._view = nil
+        self._shapeFill = nil
         self._shapeStyle = AnyShapeStyle(style)
     }
     
@@ -105,6 +117,14 @@ struct AnyShapeStyleBox: Hashable {
         }
 
         return shapeStyle
+    }
+    
+    fileprivate func filledShape<S: Shape>(_ shape: S) -> some View {
+        guard let shapeFill = _shapeFill else {
+            return AnyView(EmptyView())
+        }
+        
+        return shapeFill(AnyShape(shape))
     }
 }
 
@@ -161,6 +181,19 @@ fileprivate extension ShapeStyle {
     }
 }
 
+// MARK: Usage
+
+extension AnyShapeStyleBox {
+    
+    static var systemBackground: AnyShapeStyleBox {
+#if canImport(UIKit)
+        return AnyShapeStyleBox(Color(.systemBackground))
+#else
+        return AnyShapeStyleBox(Color.white)
+#endif
+    }
+}
+
 extension View {
     
     @ViewBuilder
@@ -171,11 +204,23 @@ extension View {
         
         if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
             self.background(shapeStyle.shapeStyle, ignoresSafeAreaEdges: edges)
-        } else {
+        } else { // Fallback on earlier versions
             self.background(
                 shapeStyle.content
                     .fallbackIgnoresSafeArea(edges: edges)
             )
+        }
+    }
+}
+
+extension Shape {
+    
+    @ViewBuilder
+    func fill(_ content: AnyShapeStyleBox) -> some View {
+        if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, *) {
+            self.fill(content.shapeStyle)
+        } else { // Fallback on earlier versions
+            content.filledShape(self)
         }
     }
 }

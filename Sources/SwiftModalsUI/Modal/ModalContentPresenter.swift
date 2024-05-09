@@ -5,6 +5,8 @@
 //  Created by Αθανάσιος Κεφαλάς on 18/4/24.
 //
 
+#if canImport(UIKit)
+import UIKit
 import SwiftUI
 import Combine
 
@@ -147,3 +149,5 @@ struct ModalContentPresenter<Content: View>: UIViewControllerRepresentable {
         uiViewController.hostUpdated()
     }
 }
+
+#endif

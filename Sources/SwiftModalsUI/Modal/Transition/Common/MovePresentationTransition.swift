@@ -35,15 +35,27 @@ struct MovePresentationTransition: PresentationTransition {
         _ environment: PresentationTransitionEnvironment
     ) -> CATransform3D {
         
+        let effectiveEdge = environment.layoutDirectionRelativeEdge(edge)
+        
         return CATransform3DTranslate(
             CATransform3DIdentity,
-            transformTranslationX(width: environment.geometry.frame.width),
-            transformTranslationY(height: environment.geometry.frame.height),
+            transformTranslationX(
+                edge: effectiveEdge,
+                width: environment.geometry.frame.width
+            ),
+            transformTranslationY(
+                edge: effectiveEdge,
+                height: environment.geometry.frame.height
+            ),
             0
         )
     }
     
-    private func transformTranslationX(width: CGFloat) -> CGFloat {
+    private func transformTranslationX(
+        edge: Edge,
+        width: CGFloat
+    ) -> CGFloat {
+        
         switch edge {
         case .top:
             return 0
@@ -56,7 +68,11 @@ struct MovePresentationTransition: PresentationTransition {
         }
     }
     
-    private func transformTranslationY(height: CGFloat) -> CGFloat {
+    private func transformTranslationY(
+        edge: Edge,
+        height: CGFloat
+    ) -> CGFloat {
+        
         switch edge {
         case .top:
             return -height
@@ -72,7 +88,7 @@ struct MovePresentationTransition: PresentationTransition {
 
 // MARK: Move Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static var slide: AnyPresentationTransition {
         return .move(edge: .bottom)

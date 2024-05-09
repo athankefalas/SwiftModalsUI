@@ -7,13 +7,13 @@
 
 import SwiftUI
 
-struct LayerPropertyTransitionAnimator<Layer: CALayer, Value>: LayerTransitionAnimator {
+public struct LayerPropertyTransitionAnimator<Layer: CALayer, Value>: LayerTransitionAnimator {
     
     let keyPath: ReferenceWritableKeyPath<Layer, Value>
     let fromValue: Value
     let toValue: Value
     
-    var id: AnyHashable {
+    public var id: AnyHashable {
         keyPathDescription
     }
     
@@ -44,7 +44,7 @@ struct LayerPropertyTransitionAnimator<Layer: CALayer, Value>: LayerTransitionAn
         self.toValue = toValue
     }
     
-    func makePrepared(
+    public func makePrepared(
         presentationAnimation: PresentationAnimation,
         for layer: CALayer
     ) -> CAAnimation {
@@ -62,7 +62,7 @@ struct LayerPropertyTransitionAnimator<Layer: CALayer, Value>: LayerTransitionAn
         )
     }
     
-    func animate(layer: CALayer) {
+    public func animate(layer: CALayer) {
         guard let layer = layer as? Layer else {
             return
         }
@@ -73,11 +73,11 @@ struct LayerPropertyTransitionAnimator<Layer: CALayer, Value>: LayerTransitionAn
 
 extension LayerPropertyTransitionAnimator: MergableLayerTransitionAnimator where Value == CATransform3D {
     
-    var reduceIdentifier: AnyHashable {
+    public var reduceIdentifier: AnyHashable {
         keyPathDescription
     }
     
-    func merged(
+    public func merged(
         with other: any LayerTransitionAnimator
     ) -> (any LayerTransitionAnimator)? {
         

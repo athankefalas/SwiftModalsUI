@@ -35,13 +35,17 @@ struct PushPresentationTransition: PresentationTransition {
         _ environment: PresentationTransitionEnvironment
     ) -> CATransform3D {
         
+        let effectiveEdge = environment.layoutDirectionRelativeEdge(edge)
+        
         return CATransform3DTranslate(
             CATransform3DIdentity,
             transformTranslationX(
+                edge: effectiveEdge,
                 width: environment.geometry.frame.width,
                 intent: environment.intent
             ),
             transformTranslationY(
+                edge: effectiveEdge,
                 height: environment.geometry.frame.height,
                 intent: environment.intent
             ),
@@ -50,6 +54,7 @@ struct PushPresentationTransition: PresentationTransition {
     }
     
     private func transformTranslationX(
+        edge: Edge,
         width: CGFloat,
         intent: PresentationTransitionEnvironment.Intent
     ) -> CGFloat {
@@ -69,6 +74,7 @@ struct PushPresentationTransition: PresentationTransition {
     }
     
     private func transformTranslationY(
+        edge: Edge,
         height: CGFloat,
         intent: PresentationTransitionEnvironment.Intent
     ) -> CGFloat {
@@ -89,7 +95,7 @@ struct PushPresentationTransition: PresentationTransition {
 
 // MARK: Push Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static func push(edge: Edge) -> AnyPresentationTransition {
         PushPresentationTransition(edge: edge).erased()

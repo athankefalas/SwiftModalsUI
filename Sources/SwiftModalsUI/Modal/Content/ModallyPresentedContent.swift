@@ -28,14 +28,6 @@ struct ModallyPresentedContent: View {
         self.content = erasedContent
     }
     
-    private var background: AnyShapeStyleBox {
-        if let backgroundStyle = backgroundPreference {
-            return backgroundStyle
-        }
-        
-        return AnyShapeStyleBox(Color(.systemBackground))
-    }
-    
     var body: some View {
         ZStack {
             Color.clear
@@ -44,23 +36,6 @@ struct ModallyPresentedContent: View {
                 backgroundPreference = value
             }
         }
-        .background(background, ignoresSafeAreaEdges: .all)
-    }
-}
-
-extension View {
-    
-    func needsWrapperLayout() -> Bool {
-        let subjectType = "\(type(of: self))"
-        
-        if subjectType.hasPrefix("TupleView<(") {
-            return true
-        }
-        
-        if subjectType.hasPrefix("Group<TupleView<(") {
-            return true
-        }
-        
-        return false
+        .background(backgroundPreference ?? .systemBackground, ignoresSafeAreaEdges: .all)
     }
 }

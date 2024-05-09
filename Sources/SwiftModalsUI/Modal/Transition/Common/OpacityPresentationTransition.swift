@@ -31,7 +31,7 @@ struct OpacityPresentationTransition: PresentationTransition {
 
 // MARK: Opacity Extensions
 
-extension AnyPresentationTransition {
+public extension AnyPresentationTransition {
     
     static var opacity: AnyPresentationTransition {
         OpacityPresentationTransition().erased()

@@ -56,4 +56,14 @@ public class PresentationTransitionEnvironment {
         self.verticalSizeClass = verticalSizeClass
         self.layoutDirection = layoutDirection
     }
+    
+    func layoutDirectionRelativeEdge(_ edge: Edge) -> Edge {
+        guard edge == .leading || edge == .trailing,
+              layoutDirection != .leftToRight else {
+            
+            return edge
+        }
+        
+        return edge == .leading ? .trailing : .leading
+    }
 }

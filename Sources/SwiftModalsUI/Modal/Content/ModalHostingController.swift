@@ -5,6 +5,8 @@
 //  Created by Αθανάσιος Κεφαλάς on 28/4/24.
 //
 
+#if canImport(UIKit)
+
 import UIKit
 import SwiftUI
 import Combine
@@ -156,10 +158,6 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         transitionController?.modalBackdrop = backdropStyle
         transitioningDelegate = transitionController
         
-        guard super.presentingViewController == nil else {
-            return
-        }
-        
         guard isStaged else {
             return
         }
@@ -174,3 +172,5 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         stagingParent = nil
     }
 }
+
+#endif
