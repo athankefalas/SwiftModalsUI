@@ -48,29 +48,31 @@ struct ModalsPlayground<Modal: View, SecondaryModal: View>: View {
     }
     
     var body: some View {
-        VStack {
-            Spacer()
-            
-            Text("Modal Presenter")
-                .font(.largeTitle)
-            
-            Button {
-                show.toggle()
-            } label: {
-                Text(show ? "Hide" : "Show")
-                    .padding(.horizontal, 16)
+        NavigationView {
+            VStack {
+                Spacer()
+                
+                Text("Modal Presenter")
+                    .font(.largeTitle)
+                
+                Button {
+                    show.toggle()
+                } label: {
+                    Text(show ? "Hide" : "Show")
+                        .padding(.horizontal, 16)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .foregroundColor(.white)
+                .background(
+                    RoundedRectangle(cornerRadius: 16.0)
+                        .fill(Color.accentColor)
+                )
+                
+                Spacer()
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 16)
-            .foregroundColor(.white)
-            .background(
-                RoundedRectangle(cornerRadius: 16.0)
-                    .fill(Color.accentColor)
-            )
-            
-            Spacer()
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
         .animation(.default, value: show)
         .background(Color.gray.opacity(0.2).edgesIgnoringSafeArea(.all))
         .modal(isPresented: $show) {
@@ -151,5 +153,4 @@ struct ModalsPlayground<Modal: View, SecondaryModal: View>: View {
                 )
             )
     }
-    .environment(\.layoutDirection, .leftToRight)
 }

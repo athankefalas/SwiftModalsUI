@@ -112,6 +112,10 @@ struct ModalContentPresenter<Content: View>: UIViewControllerRepresentable {
             
             return parent
         }
+        
+        func dismantle() {
+            hideModal()
+        }
     }
     
     @Binding
@@ -147,6 +151,13 @@ struct ModalContentPresenter<Content: View>: UIViewControllerRepresentable {
         context.coordinator.onDismiss = onDismiss
         context.coordinator.content = content
         uiViewController.hostUpdated()
+    }
+    
+    static func dismantleUIViewController(
+        _ uiViewController: ModalPresentationStagingViewController,
+        coordinator: Coordinator
+    ) {
+        uiViewController.dismantle()
     }
 }
 

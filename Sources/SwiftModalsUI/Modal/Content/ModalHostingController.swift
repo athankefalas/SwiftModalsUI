@@ -39,6 +39,11 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         super.presentingViewController ?? presentingParentViewController
     }
     
+    private var stagingParentTraitCollection: UITraitCollection?
+    override var traitCollection: UITraitCollection {
+        stagingParentTraitCollection ?? super.traitCollection
+    }
+    
     private var isStaged: Bool {
         
         guard currentTransition == .none else {
@@ -75,7 +80,7 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         self.modalPresentationStyle = .custom
         
         subscription = preferencesChangedSubject
-            .debounce(for: 0.0, scheduler: DispatchQueue.main)
+            .debounce(for: 0.01, scheduler: DispatchQueue.main)
             .sink { [weak self] in
                 self?.onPreferencesChanged()
             }
@@ -158,7 +163,7 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         transitionController?.modalBackdrop = backdropStyle
         transitioningDelegate = transitionController
         
-        guard isStaged else {
+        guard isStaged, !isBeingDismissed else {
             return
         }
         
@@ -167,9 +172,10 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
     }
     
     private func unstage() {
+        stagingParentTraitCollection = stagingParent?.traitCollection
+        stagingParent = nil
         view.removeFromSuperview()
         removeFromParent()
-        stagingParent = nil
     }
 }
 

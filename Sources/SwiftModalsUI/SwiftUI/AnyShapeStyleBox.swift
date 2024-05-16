@@ -7,6 +7,14 @@
 
 import SwiftUI
 
+#if canImport(UIKit)
+import UIKit
+#endif
+
+#if canImport(AppKit)
+import AppKit
+#endif
+
 struct AnyShapeStyleBox: Hashable {
     
     let id: AnyHashable
@@ -186,8 +194,27 @@ fileprivate extension ShapeStyle {
 extension AnyShapeStyleBox {
     
     static var systemBackground: AnyShapeStyleBox {
-#if canImport(UIKit)
+#if os(iOS)
         return AnyShapeStyleBox(Color(.systemBackground))
+#elseif os(macOS)
+        return AnyShapeStyleBox(Color.white)
+#elseif os(tvOS)
+        let color = UIColor { traits in
+            switch traits.userInterfaceStyle {
+            case .unspecified:
+                return .white
+            case .light:
+                return .white
+            case .dark:
+                return .black
+            @unknown default:
+                return .black
+            }
+        }
+        
+        return AnyShapeStyleBox(Color(color))
+#elseif os(visionOS)
+        return AnyShapeStyleBox(Material.regular)
 #else
         return AnyShapeStyleBox(Color.white)
 #endif

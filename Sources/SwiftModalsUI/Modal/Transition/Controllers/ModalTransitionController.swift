@@ -148,6 +148,7 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             self.animatesModalPresenter = animatesModalPresenter
             
             super.init(presentedViewController: presentedViewController, presenting: viewController)
+            overrideTraitCollection = presentingViewController.traitCollection
             
             guard animatesModalPresenter else {
                 return

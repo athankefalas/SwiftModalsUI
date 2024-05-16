@@ -45,6 +45,7 @@ class PlatformAnimator: NSObject, CAAnimationDelegate {
         animationGroup.delegate = self
                 
         CATransaction.begin()
+        CATransaction.setDisableActions(true)
         layerAnimators.forEach({ $0.animate(layer: layer) })
         
         layer.add(animationGroup, forKey: animationKey)

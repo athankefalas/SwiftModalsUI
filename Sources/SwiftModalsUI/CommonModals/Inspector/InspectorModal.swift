@@ -101,9 +101,11 @@ fileprivate struct InspectorModalContentView<Content: View>: View {
                 Color.clear
                     .allowsHitTesting(true)
                     .contentShape(Rectangle())
+#if !os(tvOS)
                     .onTapGesture {
                         presentationMode.wrappedValue.dismiss()
                     }
+#endif
                 
                 inspectorContent
                     .frame(

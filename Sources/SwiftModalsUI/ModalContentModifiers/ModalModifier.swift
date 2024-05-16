@@ -15,10 +15,6 @@ fileprivate struct ModalModifier<ModalContent: View>: ViewModifier {
     let onDismiss: (() -> Void)?
     let modalContent: () -> ModalContent
     
-    private var id: AnyHashable {
-        .combining(isPresented, "\(ModalContent.self)", onDismiss == nil)
-    }
-    
     init(
         isPresented: Binding<Bool>,
         onDismiss: (() -> Void)?,
@@ -37,14 +33,14 @@ fileprivate struct ModalModifier<ModalContent: View>: ViewModifier {
                 onDismiss: onDismiss,
                 content: modalContent
             )
-            .id(id)
             .opacity(0)
             .frame(width: 0, height: 0)
+            .animation(nil, value: isPresented)
             .fallbackAccessibilityHidden(true)
         )
 #else
             content.sheet(
-                isPresented: isPresented,
+                isPresented: $isPresented,
                 onDismiss: onDismiss,
                 content: modalContent
             )

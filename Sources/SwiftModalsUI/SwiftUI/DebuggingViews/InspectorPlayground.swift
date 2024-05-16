@@ -40,13 +40,13 @@ struct InspectorPlayground: View {
                         .frame(maxHeight: .infinity)
                         .padding()
                     
-                    Color.gray
+                    Color.pink
                         .opacity(0.2)
                         .frame(height: 1800)
                         .padding()
                 }
             }
-            .modalContentBackground(Color.pink)
+            .modalContentBackground(Color.gray)
         }
         .fallbackIgnoresSafeArea(edges: .all)
     }
