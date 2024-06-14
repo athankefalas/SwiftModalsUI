@@ -49,7 +49,7 @@ fileprivate struct ModalModifier<ModalContent: View>: ViewModifier {
 }
 
 
-extension View {
+public extension View {
     
     func modal<Content: View>(
         isPresented: Binding<Bool>,
