@@ -13,6 +13,16 @@ import Combine
 
 class ModalHostingController<Content: View>: UIHostingController<ModallyPresentedContent> {
     
+    struct PresentationIDPreferenceKey: PreferenceKey {
+        
+        static func reduce(
+            value: inout AnyHashable?,
+            nextValue: () -> AnyHashable?
+        ) {
+            value = value ?? nextValue()
+        }
+    }
+    
     enum AppearanceTransition: Hashable {
         case none
         case appearing
@@ -55,6 +65,10 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
         }
         
         return parent === stagingParent
+    }
+    
+    private var presentationID: AnyHashable {
+        ObjectIdentifier(self)
     }
     
     convenience init(
@@ -133,15 +147,18 @@ class ModalHostingController<Content: View>: UIHostingController<ModallyPresente
     
     func updateContent(to content: @escaping () -> Content) {
         self.content = content
-        
         self.rootView = ModallyPresentedContent(
             content: content()
+                .preference(key: PresentationIDPreferenceKey.self, value: presentationID)
                 .onPreferenceChange(ModalTransitionPreferenceKey.self) { [weak self] newValue in
                     self?.transition = newValue
                     self?.preferencesChangedSubject.send()
                 }
                 .onPreferenceChange(ModalBackdropPreferenceKey.self) { [weak self] newValue in
                     self?.backdropStyle = newValue
+                    self?.preferencesChangedSubject.send()
+                }
+                .onPreferenceChange(PresentationIDPreferenceKey.self) { [weak self] _ in
                     self?.preferencesChangedSubject.send()
                 }
         )

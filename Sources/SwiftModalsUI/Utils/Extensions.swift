@@ -132,3 +132,20 @@ struct Test: View {
         .background(AlignmentGuides())
     }
 }
+
+func firstNonNil<T>(_ first: T?, _ others: T?..., orElse defaultValue: T) -> T {
+    
+    if let first = first {
+        return first
+    }
+    
+    for other in others {
+        guard let other = other else {
+            continue
+        }
+        
+        return other
+    }
+    
+    return defaultValue
+}

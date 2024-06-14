@@ -242,6 +242,7 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             super.dismissalTransitionDidEnd(completed)
             presentingViewSnapshot.dismantle()
             backdropView.removeFromSuperview()
+            presentingViewController.view.tintAdjustmentMode = .automatic
         }
         
         @objc private func requestDismiss() {
@@ -362,7 +363,7 @@ class ModalTransitionController: NSObject, UIViewControllerTransitioningDelegate
             let tintAdjustingView = isInsertion ? origin.view : destination.view
             
             animateView(using: animation) {
-                tintAdjustingView?.tintAdjustmentMode = isInsertion ? .dimmed : .automatic
+                tintAdjustingView?.tintAdjustmentMode = isInsertion ? .dimmed : .normal
             }
             
             modalAnimator?.animate()

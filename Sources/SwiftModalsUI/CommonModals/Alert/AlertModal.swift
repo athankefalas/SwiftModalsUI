@@ -94,6 +94,9 @@ fileprivate struct AlertModalContentView<Content: View>: View {
     private var backgroundStyle: AnyShapeStyleBox?
     
     @State
+    private var contentViewConfiguration: AlertContentViewConfiguration?
+    
+    @State
     private var alertCancellationAction: AlertDefaultCancellationAction?
     
     let content: Content
@@ -113,6 +116,22 @@ fileprivate struct AlertModalContentView<Content: View>: View {
         })
     }
     
+    private var contentViewShape: AlertContentViewConfiguration.Shape {
+        firstNonNil(
+            contentViewConfiguration?.shape,
+            AlertContentViewConfiguration.defaultConfiguration.shape,
+            orElse: .defaultShape
+        )
+    }
+    
+    private var contentViewShadow: AlertContentViewConfiguration.Shadow {
+        firstNonNil(
+            contentViewConfiguration?.containerShadow,
+            AlertContentViewConfiguration.defaultConfiguration.containerShadow,
+            orElse: AlertContentViewConfiguration.Shadow()
+        )
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -126,28 +145,37 @@ fileprivate struct AlertModalContentView<Content: View>: View {
                     }
 #endif
                 
+                let containerShape = contentViewShape
+                let containerShadow = contentViewShadow
+                
                 AlertLayout(
                     geometry: geometry,
                     content: alertContent
                 )
+                .environment(
+                    \.alertContentViewConfiguration,
+                     contentViewConfiguration ?? .defaultConfiguration
+                )
+                .clipShape(
+                    RoundedRectangle(cornerRadius: containerShape.cornerRadius)
+                )
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: containerShape.cornerRadius)
                         .fill(backgroundStyle ?? .systemBackground)
                         .shadow(
-                            color: Color(
-                                .sRGBLinear,
-                                white: 0,
-                                opacity: 0.15
-                            ),
-                            radius: 16,
-                            x: 0,
-                            y: 12
+                            color: containerShadow.color,
+                            radius: containerShadow.radius,
+                            x: containerShadow.offset.x,
+                            y: containerShadow.offset.y
                         )
                 )
             }
         }
         .onPreferenceChange(ModalContentBackgroundPreferenceKey.self) { value in
             backgroundStyle = value
+        }
+        .onPreferenceChange(AlertContentViewConfigurationKey.self) { value in
+            contentViewConfiguration = value
         }
         .onPreferenceChange(AlertDefaultCancellationActionPreferenceKey.self) { value in
             alertCancellationAction = value
@@ -249,6 +277,13 @@ public struct AlertLayoutConfiguration: Hashable {
         idealLayoutSize.height > availableLayoutSize.height
     }
     
+    public var effectiveLayoutSize: CGSize {
+        CGSize(
+            width: availableLayoutSize.width,
+            height: min(idealLayoutSize.height, availableLayoutSize.height)
+        )
+    }
+    
     public init(
         idealLayoutSize: CGSize,
         availableLayoutSize: CGSize
@@ -278,9 +313,133 @@ public extension EnvironmentValues {
     }
 }
 
-enum AlertContentShape  {
+// MARK: AlertContentShapeConfiguration
+
+struct AlertContentViewConfiguration: Equatable {
     
+    struct Shape: Equatable {
+        let cornerRadius: CGFloat
+        let preferredContentInset: CGFloat
+        
+        init(cornerRadius: CGFloat, preferredContentInset: CGFloat) {
+            self.cornerRadius = cornerRadius
+            self.preferredContentInset = preferredContentInset
+        }
+        
+        static let defaultShape = Shape(
+            cornerRadius: 12,
+            preferredContentInset: 12
+        )
+    }
+    
+    struct Shadow: Equatable {
+        let color: Color
+        let radius: CGFloat
+        let offset: CGPoint
+        
+        init(
+            color: Color? = nil,
+            radius: CGFloat? = nil,
+            x: CGFloat? = nil,
+            y: CGFloat? = nil
+        ) {
+            self.color = color ?? Color(.sRGBLinear, white: 0, opacity: 0.15)
+            self.radius = radius ?? 16
+            self.offset = CGPoint(
+                x: x ?? 0,
+                y: y ?? 12
+            )
+        }
+    }
+    
+    let shape: Shape?
+    let containerShadow: Shadow?
+    
+    init(
+        shape: Shape? = nil,
+        containerShadow: Shadow? = nil
+    ) {
+        self.shape = shape
+        self.containerShadow = containerShadow
+    }
+    
+    static func reducing(
+        _ one: Self,
+        and other: Self
+    ) -> Self {
+        AlertContentViewConfiguration(
+            shape: one.shape ?? other.shape,
+            containerShadow: one.containerShadow ?? other.containerShadow
+        )
+    }
+    
+    static let defaultConfiguration = AlertContentViewConfiguration(
+        shape: .defaultShape,
+        containerShadow: Shadow()
+    )
 }
+
+struct AlertContentViewConfigurationKey: PreferenceKey, EnvironmentKey {
+    static let defaultValue = AlertContentViewConfiguration()
+    
+    static func reduce(
+        value: inout AlertContentViewConfiguration,
+        nextValue: () -> AlertContentViewConfiguration
+    ) {
+        value = .reducing(value, and: nextValue())
+    }
+}
+
+extension EnvironmentValues {
+    
+    var alertContentViewConfiguration: AlertContentViewConfiguration {
+        get { self[AlertContentViewConfigurationKey.self] }
+        set { self[AlertContentViewConfigurationKey.self] = newValue }
+    }
+}
+
+public extension View {
+    
+    func alertContentViewShape(
+        cornerRadius: CGFloat,
+        preferredContentInset: CGFloat
+    ) -> some View {
+        self.transformPreference(AlertContentViewConfigurationKey.self) { value in
+            value = .reducing(
+                value,
+                and: AlertContentViewConfiguration(
+                    shape: AlertContentViewConfiguration.Shape(
+                        cornerRadius: cornerRadius,
+                        preferredContentInset: preferredContentInset
+                    )
+                )
+            )
+        }
+    }
+    
+    func alertContentViewShadow(
+        color: Color,
+        radius: CGFloat? = nil,
+        x: CGFloat? = nil,
+        y: CGFloat? = nil
+    ) -> some View {
+        self.transformPreference(AlertContentViewConfigurationKey.self) { value in
+            value = .reducing(
+                value,
+                and: AlertContentViewConfiguration(
+                    containerShadow: AlertContentViewConfiguration.Shadow(
+                        color: color,
+                        radius: radius,
+                        x: x,
+                        y: y
+                    )
+                )
+            )
+        }
+    }
+}
+
+// MARK: AlertDefaultCancellationAction
 
 struct AlertDefaultCancellationAction: Equatable {
     
@@ -334,7 +493,7 @@ struct AlertDefaultCancellationActionPreferenceKey: PreferenceKey {
 
 public extension View {
     
-    func alertModalDefaultCancellation(
+    func alertModalCancellation(
         perform action: (@Sendable () -> Void)?
     ) -> some View {
         self.transformPreference(AlertDefaultCancellationActionPreferenceKey.self) { value in
@@ -347,63 +506,3 @@ public extension View {
         }
     }
 }
-
-// Preview
-
-struct AlertPlayground: View {
-    
-    @State
-    private var showAlert = false
-    
-    var body: some View {
-        VStack {
-            if !showAlert {
-                Spacer()
-            }
-            
-            Text("Alert Presenter")
-                .font(.largeTitle)
-                .foregroundColor(.primary)
-            
-            if showAlert {
-                Spacer()
-            }
-                        
-            Button("Show Alert") {
-                showAlert.toggle()
-            }
-            .foregroundColor(.white)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 16)
-            .background(
-                Capsule()
-                    .fill(Color.accentColor)
-            )
-            
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
-        .animation(.bouncy, value: showAlert)
-//        .alertModal(
-//            "Title",
-//            message: "Message",
-//            isPresented: $showAlert
-//        ) {
-//            
-//            CustomAlertButton("Action") {
-//                print("Perform 'Action'.")
-//            }
-//            
-//            CustomAlertButton("Cancel", role: .cancel) {
-//                print("Perform 'Cancel'.")
-//            }
-//        }
-    }
-}
-
-
-
-#Preview {
-    AlertPlayground()
-}
-

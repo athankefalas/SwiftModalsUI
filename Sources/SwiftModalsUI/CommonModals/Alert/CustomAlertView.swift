@@ -15,6 +15,9 @@ public struct CustomAlertView<Header: View, Content: View>: View {
     @Environment(\.alertLayoutConfiguration)
     private var alertLayoutConfiguration
     
+    @Environment(\.alertContentViewConfiguration)
+    private var alertContentViewConfiguration
+    
     private let header: Header
     private let content: Content
     private let actionButtons: [CustomAlertButton]
@@ -22,6 +25,10 @@ public struct CustomAlertView<Header: View, Content: View>: View {
     private var _alertHeaderFont: Font?
     private var _alertContentFont: Font?
     private var _alertButtonFont: Font?
+    
+    private var inset: CGFloat {
+        max(alertContentViewConfiguration.shape?.preferredContentInset ?? 12, 12)
+    }
     
     private var headerFont: Font {
         _alertHeaderFont ?? .body
@@ -62,7 +69,7 @@ public struct CustomAlertView<Header: View, Content: View>: View {
                 .font(headerFont.bold())
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity)
-                .padding(.top, 12)
+                .padding(.top, nil)
             
             Group {
                 if alertLayoutConfiguration?.needVerticalScrolling ?? false {
@@ -75,7 +82,7 @@ public struct CustomAlertView<Header: View, Content: View>: View {
                         .font(contentFont)
                 }
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, nil)
             .layoutPriority(1)
             
             if actionButtons.count > 0 {
@@ -84,7 +91,7 @@ public struct CustomAlertView<Header: View, Content: View>: View {
             
             buttonsLayout
         }
-        .alertModalDefaultCancellation(
+        .alertModalCancellation(
             perform: defaultCancellationAction
         )
     }
@@ -100,7 +107,7 @@ public struct CustomAlertView<Header: View, Content: View>: View {
             CustomAlertButtonLayout(
                 of: actionButtons,
                 font: buttonFont,
-                additionalInset: 12 * 2
+                additionalInset: inset * 2
             ) { fittingAxis in
                 
                 switch fittingAxis {
@@ -130,7 +137,7 @@ public struct CustomAlertView<Header: View, Content: View>: View {
                     maxHeight: .infinity,
                     alignment: .center
                 )
-                .padding(.horizontal, 12)
+                .padding(.horizontal, inset)
                 
                 if !isLast {
                     Divider()
@@ -157,12 +164,13 @@ public struct CustomAlertView<Header: View, Content: View>: View {
                     alignment: .center
                 )
                 .contentShape(Rectangle())
+#if !os(tvOS)
                 .onTapGesture {
                     button.performAction(
                         presentationMode: presentationMode
                     )
                 }
-                
+#endif
                 if !isLast {
                     Divider()
                         .frame(maxHeight: .infinity)
@@ -170,7 +178,7 @@ public struct CustomAlertView<Header: View, Content: View>: View {
             }
         }
         .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, 12)
+        .padding(.horizontal, inset)
     }
     
     // MARK: Modifiers
